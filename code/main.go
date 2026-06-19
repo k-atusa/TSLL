@@ -54,10 +54,29 @@ func initEnv() {
 
 func main() {
 	initEnv()
-	fs := http.FileServer(http.Dir("."))
-	http.Handle("/", fs)
+	allowedFiles := map[string]bool{
+		"/":            true,
+		"/index.html":  true,
+		"/app.js":      true,
+		"/favicon.png": true,
+	} // whitelist of files to serve
 
-	// files handler
+	// HTTP frontend handler
+	http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
+		path := filepath.Clean(r.URL.Path)
+		path = filepath.ToSlash(path)
+		if !allowedFiles[path] {
+			http.Error(w, "Forbidden", http.StatusForbidden)
+			return
+		}
+		if path == "/" {
+			http.ServeFile(w, r, "./index.html")
+		} else {
+			http.ServeFile(w, r, filepath.Join(".", path))
+		}
+	})
+
+	// HTTP files handler
 	filesFs := http.FileServer(http.Dir(filepath.Join(config.PostDir, "files")))
 	http.HandleFunc("/api/com/files/", func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Security-Policy", "default-src 'none'; img-src 'self'; media-src 'self'; style-src 'unsafe-inline'") // prevent XSS
@@ -65,7 +84,7 @@ func main() {
 		http.StripPrefix("/api/com/files/", filesFs).ServeHTTP(w, r)
 	})
 
-	// register post handlers
+	// register posting handlers
 	http.HandleFunc("/api/com/posts", func(w http.ResponseWriter, r *http.Request) {
 		if r.Method == http.MethodGet {
 			handleGetPosts(w, r)
