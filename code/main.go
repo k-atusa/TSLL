@@ -2,18 +2,32 @@
 package main
 
 import (
+	"encoding/hex"
 	"encoding/json"
+	"errors"
 	"fmt"
+	"io"
 	"log"
 	"net/http"
 	"os"
 	"path/filepath"
+	"strconv"
+
+	"github.com/taewook427/USAG-KOX/FalseCrypt"
 )
 
 type Config struct {
+	// blog server
 	Port    int    `json:"port"`
 	PostDir string `json:"postdir"`
 	PostCap int64  `json:"postcap"`
+
+	// chunk server
+	ChunkKey    []byte    `json:"chunkkey"`
+	ChunkMain   string    `json:"chunkmain"`
+	ChunkDirs   []string  `json:"chunkdirs"`
+	ChunkSizes  []int64   `json:"chunksizes"`
+	ChunkWeight []float32 `json:"chunkweight"`
 }
 
 var config Config
@@ -32,6 +46,12 @@ func initEnv() {
 			Port:    80,
 			PostDir: "./data",
 			PostCap: 104857600,
+
+			ChunkKey:    []byte(""),
+			ChunkMain:   "./accounts",
+			ChunkDirs:   []string{"./chunks"},
+			ChunkSizes:  []int64{102400},
+			ChunkWeight: []float32{1.0},
 		}
 		data, _ := json.MarshalIndent(config, "", "  ")
 		if err := os.WriteFile("config.json", data, 0644); err != nil {
@@ -52,7 +72,174 @@ func initEnv() {
 	os.MkdirAll(filepath.Join(config.PostDir, "files"), 0755)
 }
 
+// init chunk server
+func initCS() (*ChunkSvr, error) {
+	if len(config.ChunkDirs) == 0 || len(config.ChunkDirs) != len(config.ChunkSizes) || len(config.ChunkSizes) != len(config.ChunkWeight) {
+		return nil, errors.New("invalid chunk server config")
+	}
+	cus := make([]FalseCrypt.ChunkUnit, len(config.ChunkDirs))
+	for i := range config.ChunkDirs {
+		cus[i].Init(config.ChunkDirs[i], config.ChunkSizes[i], config.ChunkWeight[i])
+	}
+	var cb FalseCrypt.ChunkBalancer
+	cb.Init(config.ChunkMain, cus)
+	var cs ChunkSvr
+	cs.Init(config.ChunkKey, &cb)
+	return &cs, nil
+}
+
+// register chunk server handler
+func registerFCs(cs *ChunkSvr) {
+	http.HandleFunc("/api/fc/getlog", func(w http.ResponseWriter, r *http.Request) {
+		r.ParseForm()
+		timestamp, _ := strconv.ParseInt(r.FormValue("timestamp"), 10, 64)
+		auth, _ := hex.DecodeString(r.FormValue("auth"))
+
+		logStr, err := cs.GetLog(timestamp, auth)
+		if err != nil {
+			httpErr(w, err)
+			return
+		}
+		w.Write([]byte(logStr))
+	})
+
+	http.HandleFunc("/api/fc/getaccount", func(w http.ResponseWriter, r *http.Request) {
+		r.ParseForm()
+		username := r.FormValue("username")
+
+		data, err := cs.GetAccount(username)
+		if err != nil {
+			httpErr(w, err)
+			return
+		}
+		w.Write(data)
+	})
+
+	http.HandleFunc("/api/fc/setaccount", func(w http.ResponseWriter, r *http.Request) {
+		r.ParseForm()
+		username := r.FormValue("username")
+		timestamp, _ := strconv.ParseInt(r.FormValue("timestamp"), 10, 64)
+		auth, _ := hex.DecodeString(r.FormValue("auth"))
+		chksum, _ := hex.DecodeString(r.FormValue("chksum"))
+
+		data, _ := io.ReadAll(r.Body)
+		defer r.Body.Close()
+
+		err := cs.SetAccount(username, data, chksum, timestamp, auth)
+		if err != nil {
+			httpErr(w, err)
+			return
+		}
+		w.WriteHeader(http.StatusOK)
+	})
+
+	http.HandleFunc("/api/fc/readchunk", func(w http.ResponseWriter, r *http.Request) {
+		r.ParseForm()
+		cid, _ := hex.DecodeString(r.FormValue("cid"))
+
+		data, err := cs.ReadChunk(cid)
+		if err != nil {
+			httpErr(w, err)
+			return
+		}
+		w.Write(data)
+	})
+
+	http.HandleFunc("/api/fc/writechunk", func(w http.ResponseWriter, r *http.Request) {
+		r.ParseForm()
+		cid, _ := hex.DecodeString(r.FormValue("cid"))
+		timestamp, _ := strconv.ParseInt(r.FormValue("timestamp"), 10, 64)
+		auth, _ := hex.DecodeString(r.FormValue("auth"))
+		chksum, _ := hex.DecodeString(r.FormValue("chksum"))
+
+		data, _ := io.ReadAll(r.Body)
+		defer r.Body.Close()
+
+		err := cs.WriteChunk(cid, data, chksum, timestamp, auth)
+		if err != nil {
+			httpErr(w, err)
+			return
+		}
+		w.WriteHeader(http.StatusOK)
+	})
+
+	http.HandleFunc("/api/fc/delchunk", func(w http.ResponseWriter, r *http.Request) {
+		r.ParseForm()
+		cid, _ := hex.DecodeString(r.FormValue("cid"))
+		timestamp, _ := strconv.ParseInt(r.FormValue("timestamp"), 10, 64)
+		auth, _ := hex.DecodeString(r.FormValue("auth"))
+
+		err := cs.DelChunk(cid, timestamp, auth)
+		if err != nil {
+			httpErr(w, err)
+			return
+		}
+		w.WriteHeader(http.StatusOK)
+	})
+
+	http.HandleFunc("/api/fc/checkchunk", func(w http.ResponseWriter, r *http.Request) {
+		r.ParseForm()
+		chksum, _ := hex.DecodeString(r.FormValue("chksum"))
+		chkHash := r.FormValue("chkHash") == "true"
+		timestamp, _ := strconv.ParseInt(r.FormValue("timestamp"), 10, 64)
+		auth, _ := hex.DecodeString(r.FormValue("auth"))
+
+		cids, _ := io.ReadAll(r.Body)
+		defer r.Body.Close()
+
+		err := cs.CheckChunk(cids, chksum, chkHash, timestamp, auth)
+		if err != nil {
+			httpErr(w, err)
+			return
+		}
+		w.WriteHeader(http.StatusOK)
+	})
+
+	http.HandleFunc("/api/fc/trimchunk", func(w http.ResponseWriter, r *http.Request) {
+		r.ParseForm()
+		rmEmpty := r.FormValue("rmEmpty") == "true"
+		chksum, _ := hex.DecodeString(r.FormValue("chksum"))
+		timestamp, _ := strconv.ParseInt(r.FormValue("timestamp"), 10, 64)
+		auth, _ := hex.DecodeString(r.FormValue("auth"))
+
+		bloom, _ := io.ReadAll(r.Body)
+		defer r.Body.Close()
+
+		err := cs.TrimChunk(rmEmpty, bloom, chksum, timestamp, auth)
+		if err != nil {
+			httpErr(w, err)
+			return
+		}
+		w.WriteHeader(http.StatusOK)
+	})
+}
+
+// read error, make http code
+func httpErr(w http.ResponseWriter, err error) {
+	if err == nil {
+		return
+	}
+	switch err.Error() {
+	case "unauthorized":
+		http.Error(w, err.Error(), http.StatusUnauthorized)
+	case "invalid checksum":
+		http.Error(w, err.Error(), http.StatusBadRequest)
+	case "invalid CIDs length":
+		http.Error(w, err.Error(), http.StatusBadRequest)
+	case "invalid filter length":
+		http.Error(w, err.Error(), http.StatusBadRequest)
+	default:
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+	}
+}
+
 func main() {
+	defer func() {
+		if e := recover(); e != nil {
+			os.WriteFile("./panic-log.txt", []byte(fmt.Sprintf("%v", e)), 0644)
+		}
+	}()
+
 	initEnv()
 	allowedFiles := map[string]bool{
 		"/":            true,
@@ -101,6 +288,14 @@ func main() {
 			http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
 		}
 	})
+
+	// register chunk handlers
+	cs, err := initCS()
+	if err == nil {
+		registerFCs(cs)
+	} else {
+		log.Fatalf("Failed to init chunk server: %v", err)
+	}
 
 	// start server
 	log.Printf("Server starting on http://localhost:%d", config.Port)
