@@ -23,11 +23,11 @@ type Config struct {
 	PostCap int64  `json:"postcap"`
 
 	// chunk server
-	ChunkKey    []byte    `json:"chunkkey"`
-	ChunkMain   string    `json:"chunkmain"`
-	ChunkDirs   []string  `json:"chunkdirs"`
-	ChunkSizes  []int64   `json:"chunksizes"`
-	ChunkWeight []float32 `json:"chunkweight"`
+	ChunkKey    []byte    `json:"chkkey"`
+	ChunkMain   string    `json:"chkmain"`
+	ChunkDir    []string  `json:"chkdir"`
+	ChunkSize   []int64   `json:"chksize"`
+	ChunkWeight []float32 `json:"chkweight"`
 }
 
 var config Config
@@ -49,8 +49,8 @@ func initEnv() {
 
 			ChunkKey:    []byte(""),
 			ChunkMain:   "./accounts",
-			ChunkDirs:   []string{"./chunks"},
-			ChunkSizes:  []int64{102400},
+			ChunkDir:    []string{"./chunks"},
+			ChunkSize:   []int64{102400},
 			ChunkWeight: []float32{1.0},
 		}
 		data, _ := json.MarshalIndent(config, "", "  ")
@@ -74,12 +74,12 @@ func initEnv() {
 
 // init chunk server
 func initCS() (*ChunkSvr, error) {
-	if len(config.ChunkDirs) == 0 || len(config.ChunkDirs) != len(config.ChunkSizes) || len(config.ChunkSizes) != len(config.ChunkWeight) {
+	if len(config.ChunkDir) == 0 || len(config.ChunkDir) != len(config.ChunkSize) || len(config.ChunkSize) != len(config.ChunkWeight) {
 		return nil, errors.New("invalid chunk server config")
 	}
-	cus := make([]FalseCrypt.ChunkUnit, len(config.ChunkDirs))
-	for i := range config.ChunkDirs {
-		cus[i].Init(config.ChunkDirs[i], config.ChunkSizes[i], config.ChunkWeight[i])
+	cus := make([]FalseCrypt.ChunkUnit, len(config.ChunkDir))
+	for i := range config.ChunkDir {
+		cus[i].Init(config.ChunkDir[i], config.ChunkSize[i], config.ChunkWeight[i])
 	}
 	var cb FalseCrypt.ChunkBalancer
 	cb.Init(config.ChunkMain, cus)
