@@ -11,6 +11,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/k-atusa/USAG-Lib/Bencrypt"
 	"github.com/taewook427/USAG-KOX/FalseCrypt"
 )
 
@@ -33,7 +34,7 @@ func (cs *ChunkSvr) authorize(order string, timestamp int64, value []byte, auth 
 	copy(buf[:len(order)], order)
 	binary.LittleEndian.PutUint64(buf[len(order):len(order)+8], uint64(timestamp))
 	copy(buf[len(order)+8:], value)
-	return subtle.ConstantTimeCompare(auth, FalseCrypt.HMAC3256(cs.wrkey, buf)) == 1
+	return subtle.ConstantTimeCompare(auth, Bencrypt.HMAC3256(cs.wrkey, buf)) == 1
 }
 
 func (cs *ChunkSvr) addLog(msg string) {
@@ -74,7 +75,7 @@ func (cs *ChunkSvr) SetAccount(username string, data []byte, chksum []byte, time
 	if !cs.authorize("SetAccount", timestamp, chksum, auth) {
 		return errors.New("unauthorized")
 	}
-	if !bytes.Equal(chksum, FalseCrypt.SHA3256(data)) {
+	if !bytes.Equal(chksum, Bencrypt.SHA3256(data)) {
 		return errors.New("invalid checksum")
 	}
 	if err := cs.cb.SetAccount(username, bytes.NewReader(data), int64(len(data))); err != nil {
@@ -93,7 +94,7 @@ func (cs *ChunkSvr) WriteChunk(cid []byte, data []byte, chksum []byte, timestamp
 	if !cs.authorize("WriteChunk", timestamp, chksum, auth) {
 		return errors.New("unauthorized")
 	}
-	if !bytes.Equal(chksum, FalseCrypt.SHA3256(data)) {
+	if !bytes.Equal(chksum, Bencrypt.SHA3256(data)) {
 		return errors.New("invalid checksum")
 	}
 	if err := cs.cb.WriteChunk(cid, data); err != nil {
@@ -118,7 +119,7 @@ func (cs *ChunkSvr) CheckChunk(cids []byte, chksum []byte, chkHash bool, timesta
 	if !cs.authorize("CheckChunk", timestamp, chksum, auth) {
 		return errors.New("unauthorized")
 	}
-	if !bytes.Equal(chksum, FalseCrypt.SHA3256(cids)) {
+	if !bytes.Equal(chksum, Bencrypt.SHA3256(cids)) {
 		return errors.New("invalid checksum")
 	}
 	if len(cids) == 0 || len(cids)%16 != 0 {
@@ -153,7 +154,7 @@ func (cs *ChunkSvr) TrimChunk(rmEmpty bool, bloom []byte, chksum []byte, timesta
 	if !cs.authorize("TrimChunk", timestamp, chksum, auth) {
 		return errors.New("unauthorized")
 	}
-	if !bytes.Equal(chksum, FalseCrypt.SHA3256(bloom)) {
+	if !bytes.Equal(chksum, Bencrypt.SHA3256(bloom)) {
 		return errors.New("invalid checksum")
 	}
 	if len(bloom) < 12 {
