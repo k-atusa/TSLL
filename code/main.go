@@ -23,6 +23,7 @@ type Config struct {
 	PostCap int64  `json:"postcap"`
 
 	// chunk server
+	MaxSize     int64     `json:"maxsize"`
 	ChunkKey    []byte    `json:"chkkey"`
 	ChunkMain   string    `json:"chkmain"`
 	ChunkDir    []string  `json:"chkdir"`
@@ -47,6 +48,7 @@ func initEnv() {
 			PostDir: "./data",
 			PostCap: 104857600,
 
+			MaxSize:     512 * 1048576,
 			ChunkKey:    []byte(""),
 			ChunkMain:   "./accounts",
 			ChunkDir:    []string{"./chunks"},
@@ -116,16 +118,21 @@ func registerFCs(cs *ChunkSvr) {
 	})
 
 	http.HandleFunc("/api/fc/setaccount", func(w http.ResponseWriter, r *http.Request) {
+		r.Body = http.MaxBytesReader(w, r.Body, config.MaxSize)
 		r.ParseForm()
 		username := r.FormValue("username")
 		timestamp, _ := strconv.ParseInt(r.FormValue("timestamp"), 10, 64)
 		auth, _ := hex.DecodeString(r.FormValue("auth"))
 		chksum, _ := hex.DecodeString(r.FormValue("chksum"))
 
-		data, _ := io.ReadAll(r.Body)
+		data, err := io.ReadAll(r.Body)
 		defer r.Body.Close()
+		if err != nil {
+			http.Error(w, "request too large", http.StatusRequestEntityTooLarge)
+			return
+		}
 
-		err := cs.SetAccount(username, data, chksum, timestamp, auth)
+		err = cs.SetAccount(username, data, chksum, timestamp, auth)
 		if err != nil {
 			httpErr(w, err)
 			return
@@ -146,16 +153,21 @@ func registerFCs(cs *ChunkSvr) {
 	})
 
 	http.HandleFunc("/api/fc/writechunk", func(w http.ResponseWriter, r *http.Request) {
+		r.Body = http.MaxBytesReader(w, r.Body, config.MaxSize)
 		r.ParseForm()
 		cid, _ := hex.DecodeString(r.FormValue("cid"))
 		timestamp, _ := strconv.ParseInt(r.FormValue("timestamp"), 10, 64)
 		auth, _ := hex.DecodeString(r.FormValue("auth"))
 		chksum, _ := hex.DecodeString(r.FormValue("chksum"))
 
-		data, _ := io.ReadAll(r.Body)
+		data, err := io.ReadAll(r.Body)
 		defer r.Body.Close()
+		if err != nil {
+			http.Error(w, "request too large", http.StatusRequestEntityTooLarge)
+			return
+		}
 
-		err := cs.WriteChunk(cid, data, chksum, timestamp, auth)
+		err = cs.WriteChunk(cid, data, chksum, timestamp, auth)
 		if err != nil {
 			httpErr(w, err)
 			return
@@ -178,16 +190,21 @@ func registerFCs(cs *ChunkSvr) {
 	})
 
 	http.HandleFunc("/api/fc/checkchunk", func(w http.ResponseWriter, r *http.Request) {
+		r.Body = http.MaxBytesReader(w, r.Body, config.MaxSize)
 		r.ParseForm()
 		chksum, _ := hex.DecodeString(r.FormValue("chksum"))
 		chkHash := r.FormValue("chkHash") == "true"
 		timestamp, _ := strconv.ParseInt(r.FormValue("timestamp"), 10, 64)
 		auth, _ := hex.DecodeString(r.FormValue("auth"))
 
-		cids, _ := io.ReadAll(r.Body)
+		cids, err := io.ReadAll(r.Body)
 		defer r.Body.Close()
+		if err != nil {
+			http.Error(w, "request too large", http.StatusRequestEntityTooLarge)
+			return
+		}
 
-		err := cs.CheckChunk(cids, chksum, chkHash, timestamp, auth)
+		err = cs.CheckChunk(cids, chksum, chkHash, timestamp, auth)
 		if err != nil {
 			httpErr(w, err)
 			return
@@ -196,16 +213,21 @@ func registerFCs(cs *ChunkSvr) {
 	})
 
 	http.HandleFunc("/api/fc/trimchunk", func(w http.ResponseWriter, r *http.Request) {
+		r.Body = http.MaxBytesReader(w, r.Body, config.MaxSize)
 		r.ParseForm()
 		rmEmpty := r.FormValue("rmEmpty") == "true"
 		chksum, _ := hex.DecodeString(r.FormValue("chksum"))
 		timestamp, _ := strconv.ParseInt(r.FormValue("timestamp"), 10, 64)
 		auth, _ := hex.DecodeString(r.FormValue("auth"))
 
-		bloom, _ := io.ReadAll(r.Body)
+		bloom, err := io.ReadAll(r.Body)
 		defer r.Body.Close()
+		if err != nil {
+			http.Error(w, "request too large", http.StatusRequestEntityTooLarge)
+			return
+		}
 
-		err := cs.TrimChunk(rmEmpty, bloom, chksum, timestamp, auth)
+		err = cs.TrimChunk(rmEmpty, bloom, chksum, timestamp, auth)
 		if err != nil {
 			httpErr(w, err)
 			return
