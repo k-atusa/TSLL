@@ -4,7 +4,6 @@ package main
 import (
 	"encoding/hex"
 	"encoding/json"
-	"errors"
 	"fmt"
 	"io"
 	"log"
@@ -23,12 +22,8 @@ type Config struct {
 	PostCap int64  `json:"postcap"`
 
 	// chunk server
-	MaxSize     int64     `json:"maxsize"`
-	ChunkKey    []byte    `json:"chkkey"`
-	ChunkMain   string    `json:"chkmain"`
-	ChunkDir    []string  `json:"chkdir"`
-	ChunkSize   []int64   `json:"chksize"`
-	ChunkWeight []float32 `json:"chkweight"`
+	MaxSize   int64  `json:"maxsize"`
+	ChunkMeta string `json:"chunkmeta"`
 }
 
 var config Config
@@ -48,12 +43,8 @@ func initEnv() {
 			PostDir: "./data",
 			PostCap: 104857600,
 
-			MaxSize:     512 * 1048576,
-			ChunkKey:    []byte(""),
-			ChunkMain:   "./accounts",
-			ChunkDir:    []string{"./chunks"},
-			ChunkSize:   []int64{102400},
-			ChunkWeight: []float32{1.0},
+			MaxSize:   512 * 1048576,
+			ChunkMeta: "./chunkmeta.json",
 		}
 		data, _ := json.MarshalIndent(config, "", "  ")
 		if err := os.WriteFile("config.json", data, 0644); err != nil {
@@ -76,17 +67,37 @@ func initEnv() {
 
 // init chunk server
 func initCS() (*ChunkSvr, error) {
-	if len(config.ChunkDir) == 0 || len(config.ChunkDir) != len(config.ChunkSize) || len(config.ChunkSize) != len(config.ChunkWeight) {
-		return nil, errors.New("invalid chunk server config")
+	var meta FalseCrypt.ChunkMeta
+	metaBytes, err := os.ReadFile(config.ChunkMeta)
+	if os.IsNotExist(err) { // make new if not exists
+		meta.MainPath = "./accounts"
+		meta.BfSize = 1048576
+		meta.Paths = []string{"./chunks"}
+		meta.Caps = []int64{1024 * 1048576}
+		meta.Weights = []float32{1.0}
+		meta.WriteKey = []byte("write_key")
+
+		metaStr, saveErr := meta.Save()
+		if saveErr != nil {
+			return nil, fmt.Errorf("failed to serialize chunkmeta: %v", saveErr)
+		}
+		if writeErr := os.WriteFile(config.ChunkMeta, []byte(metaStr), 0644); writeErr != nil {
+			return nil, fmt.Errorf("failed to write chunkmeta: %v", writeErr)
+		}
+		log.Println("Created chunkmeta:", config.ChunkMeta)
+	} else if err != nil {
+		return nil, fmt.Errorf("failed to read chunkmeta: %v", err)
+	} else {
+		if initErr := meta.Init(string(metaBytes)); initErr != nil {
+			return nil, fmt.Errorf("failed to initialize chunkmeta: %v", initErr)
+		}
 	}
-	cus := make([]FalseCrypt.ChunkUnit, len(config.ChunkDir))
-	for i := range config.ChunkDir {
-		cus[i].Init(config.ChunkDir[i], config.ChunkSize[i], config.ChunkWeight[i])
-	}
+
+	// init chunkbalancer
 	var cb FalseCrypt.ChunkBalancer
-	cb.Init(config.ChunkMain, cus)
+	cb.Init(&meta)
 	var cs ChunkSvr
-	cs.Init(config.ChunkKey, &cb)
+	cs.Init(meta.WriteKey, &cb)
 	return &cs, nil
 }
 
@@ -190,32 +201,23 @@ func registerFCs(cs *ChunkSvr) {
 	})
 
 	http.HandleFunc("/api/fc/checkchunk", func(w http.ResponseWriter, r *http.Request) {
-		r.Body = http.MaxBytesReader(w, r.Body, config.MaxSize)
 		r.ParseForm()
-		chksum, _ := hex.DecodeString(r.FormValue("chksum"))
-		chkHash := r.FormValue("chkHash") == "true"
 		timestamp, _ := strconv.ParseInt(r.FormValue("timestamp"), 10, 64)
 		auth, _ := hex.DecodeString(r.FormValue("auth"))
 
-		cids, err := io.ReadAll(r.Body)
-		defer r.Body.Close()
-		if err != nil {
-			http.Error(w, "request too large", http.StatusRequestEntityTooLarge)
-			return
-		}
-
-		err = cs.CheckChunk(cids, chksum, chkHash, timestamp, auth)
+		data, chksum, err := cs.CheckChunk(timestamp, auth)
 		if err != nil {
 			httpErr(w, err)
 			return
 		}
-		w.WriteHeader(http.StatusOK)
+		w.Header().Set("Content-Type", "application/octet-stream")
+		w.Header().Set("Chksum", hex.EncodeToString(chksum))
+		w.Write(data)
 	})
 
 	http.HandleFunc("/api/fc/trimchunk", func(w http.ResponseWriter, r *http.Request) {
 		r.Body = http.MaxBytesReader(w, r.Body, config.MaxSize)
 		r.ParseForm()
-		rmEmpty := r.FormValue("rmEmpty") == "true"
 		chksum, _ := hex.DecodeString(r.FormValue("chksum"))
 		timestamp, _ := strconv.ParseInt(r.FormValue("timestamp"), 10, 64)
 		auth, _ := hex.DecodeString(r.FormValue("auth"))
@@ -227,7 +229,20 @@ func registerFCs(cs *ChunkSvr) {
 			return
 		}
 
-		err = cs.TrimChunk(rmEmpty, bloom, chksum, timestamp, auth)
+		err = cs.TrimChunk(bloom, chksum, timestamp, auth)
+		if err != nil {
+			httpErr(w, err)
+			return
+		}
+		w.WriteHeader(http.StatusOK)
+	})
+
+	http.HandleFunc("/api/fc/trimempty", func(w http.ResponseWriter, r *http.Request) {
+		r.ParseForm()
+		timestamp, _ := strconv.ParseInt(r.FormValue("timestamp"), 10, 64)
+		auth, _ := hex.DecodeString(r.FormValue("auth"))
+
+		err := cs.TrimEmpty(timestamp, auth)
 		if err != nil {
 			httpErr(w, err)
 			return

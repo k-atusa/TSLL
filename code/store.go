@@ -34,7 +34,12 @@ func (cs *ChunkSvr) authorize(order string, timestamp int64, value []byte, auth 
 	copy(buf[:len(order)], order)
 	binary.LittleEndian.PutUint64(buf[len(order):len(order)+8], uint64(timestamp))
 	copy(buf[len(order)+8:], value)
-	return subtle.ConstantTimeCompare(auth, Bencrypt.HMAC3256(cs.wrkey, buf)) == 1
+	if subtle.ConstantTimeCompare(auth, Bencrypt.HMAC3256(cs.wrkey, buf)) == 1 {
+		return true
+	} else {
+		time.Sleep(1500 * time.Millisecond) // anti random attack
+		return false
+	}
 }
 
 func (cs *ChunkSvr) addLog(msg string) {
@@ -114,43 +119,17 @@ func (cs *ChunkSvr) DelChunk(cid []byte, timestamp int64, auth []byte) error {
 	return nil
 }
 
-// check storage
-func (cs *ChunkSvr) CheckChunk(cids []byte, chksum []byte, chkHash bool, timestamp int64, auth []byte) error {
-	if !cs.authorize("CheckChunk", timestamp, chksum, auth) {
-		return errors.New("unauthorized")
+// returns existing chunk bloomfilter and checksum
+func (cs *ChunkSvr) CheckChunk(timestamp int64, auth []byte) ([]byte, []byte, error) {
+	if !cs.authorize("CheckChunk", timestamp, nil, auth) {
+		return nil, nil, errors.New("unauthorized")
 	}
-	if !bytes.Equal(chksum, Bencrypt.SHA3256(cids)) {
-		return errors.New("invalid checksum")
-	}
-	if len(cids) == 0 || len(cids)%16 != 0 {
-		return errors.New("invalid CIDs length")
-	}
-
-	go func() {
-		defer func() {
-			if r := recover(); r != nil {
-				cs.addLog(fmt.Sprintf("[CheckChunk] panic: %v", r))
-			}
-		}()
-		cs.addLog("[CheckChunk] start")
-		defer cs.addLog("[CheckChunk] finish")
-
-		// check all chunks
-		for i := 0; i < len(cids)/16; i++ {
-			ext, err := cs.cb.CheckChunk(cids[16*i:16*i+16], chkHash)
-			if !ext {
-				cs.addLog(fmt.Sprintf("[CheckChunk] chunk %x not found", cids[16*i:16*i+16]))
-			}
-			if err != nil {
-				cs.addLog(fmt.Sprintf("[CheckChunk] chunk %x error: %v", cids[16*i:16*i+16], err))
-			}
-		}
-	}()
-	return nil
+	bloom := cs.cb.CheckChunk()
+	return bloom, Bencrypt.SHA3256(bloom), nil
 }
 
-// trim storage
-func (cs *ChunkSvr) TrimChunk(rmEmpty bool, bloom []byte, chksum []byte, timestamp int64, auth []byte) error {
+// trims chunk by bloomfilter
+func (cs *ChunkSvr) TrimChunk(bloom []byte, chksum []byte, timestamp int64, auth []byte) error {
 	if !cs.authorize("TrimChunk", timestamp, chksum, auth) {
 		return errors.New("unauthorized")
 	}
@@ -159,13 +138,6 @@ func (cs *ChunkSvr) TrimChunk(rmEmpty bool, bloom []byte, chksum []byte, timesta
 	}
 	if len(bloom) < 12 {
 		return errors.New("invalid filter length")
-	}
-
-	// fast trim with empty folder removing
-	if rmEmpty {
-		tr, err := cs.cb.TrimEmpty()
-		cs.addLog(fmt.Sprintf("[TrimEmpty] emptied %d folders", tr))
-		return err
 	}
 
 	go func() {
@@ -177,7 +149,6 @@ func (cs *ChunkSvr) TrimChunk(rmEmpty bool, bloom []byte, chksum []byte, timesta
 		cs.addLog("[TrimChunk] start")
 		defer cs.addLog("[TrimChunk] finish")
 
-		// full trim with bloom filter
 		tr, err := cs.cb.TrimChunk(bloom)
 		cs.addLog(fmt.Sprintf("[TrimChunk] delete %d chunks", tr))
 		if err != nil {
@@ -185,4 +156,15 @@ func (cs *ChunkSvr) TrimChunk(rmEmpty bool, bloom []byte, chksum []byte, timesta
 		}
 	}()
 	return nil
+}
+
+// removes empty folders
+func (cs *ChunkSvr) TrimEmpty(timestamp int64, auth []byte) error {
+	if !cs.authorize("TrimEmpty", timestamp, nil, auth) {
+		return errors.New("unauthorized")
+	}
+
+	tr, err := cs.cb.TrimEmpty()
+	cs.addLog(fmt.Sprintf("[TrimEmpty] emptied %d folders", tr))
+	return err
 }
