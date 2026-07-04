@@ -4,7 +4,7 @@ go 1.26.3
 
 require (
 	github.com/k-atusa/USAG-Lib v1.6.5
-	github.com/taewook427/USAG-KOX v1.3.1
+	github.com/taewook427/USAG-KOX v1.3.2
 )
 
 require (

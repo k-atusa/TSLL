@@ -103,19 +103,6 @@ func initCS() (*ChunkSvr, error) {
 
 // register chunk server handler
 func registerFCs(cs *ChunkSvr) {
-	http.HandleFunc("/api/fc/getlog", func(w http.ResponseWriter, r *http.Request) {
-		r.ParseForm()
-		timestamp, _ := strconv.ParseInt(r.FormValue("timestamp"), 10, 64)
-		auth, _ := hex.DecodeString(r.FormValue("auth"))
-
-		logStr, err := cs.GetLog(timestamp, auth)
-		if err != nil {
-			httpErr(w, err)
-			return
-		}
-		w.Write([]byte(logStr))
-	})
-
 	http.HandleFunc("/api/fc/getaccount", func(w http.ResponseWriter, r *http.Request) {
 		r.ParseForm()
 		username := r.FormValue("username")
@@ -200,6 +187,19 @@ func registerFCs(cs *ChunkSvr) {
 		w.WriteHeader(http.StatusOK)
 	})
 
+	http.HandleFunc("/api/fc/getlog", func(w http.ResponseWriter, r *http.Request) {
+		r.ParseForm()
+		timestamp, _ := strconv.ParseInt(r.FormValue("timestamp"), 10, 64)
+		auth, _ := hex.DecodeString(r.FormValue("auth"))
+
+		logStr, err := cs.GetLog(timestamp, auth)
+		if err != nil {
+			httpErr(w, err)
+			return
+		}
+		w.Write([]byte(logStr))
+	})
+
 	http.HandleFunc("/api/fc/checkchunk", func(w http.ResponseWriter, r *http.Request) {
 		r.ParseForm()
 		timestamp, _ := strconv.ParseInt(r.FormValue("timestamp"), 10, 64)
@@ -260,10 +260,6 @@ func httpErr(w http.ResponseWriter, err error) {
 	case "unauthorized":
 		http.Error(w, err.Error(), http.StatusUnauthorized)
 	case "invalid checksum":
-		http.Error(w, err.Error(), http.StatusBadRequest)
-	case "invalid CIDs length":
-		http.Error(w, err.Error(), http.StatusBadRequest)
-	case "invalid filter length":
 		http.Error(w, err.Error(), http.StatusBadRequest)
 	default:
 		http.Error(w, err.Error(), http.StatusInternalServerError)

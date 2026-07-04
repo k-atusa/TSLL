@@ -6,9 +6,6 @@ import (
 	"crypto/subtle"
 	"encoding/binary"
 	"errors"
-	"fmt"
-	"strings"
-	"sync"
 	"time"
 
 	"github.com/k-atusa/USAG-Lib/Bencrypt"
@@ -17,10 +14,8 @@ import (
 
 // chunk storage server
 type ChunkSvr struct {
-	lock  sync.RWMutex
 	wrkey []byte
 	cb    *FalseCrypt.ChunkBalancer
-	log   []string
 }
 
 func (cs *ChunkSvr) authorize(order string, timestamp int64, value []byte, auth []byte) bool {
@@ -42,28 +37,9 @@ func (cs *ChunkSvr) authorize(order string, timestamp int64, value []byte, auth 
 	}
 }
 
-func (cs *ChunkSvr) addLog(msg string) {
-	cs.lock.Lock()
-	defer cs.lock.Unlock()
-	cs.log = append(cs.log, msg)
-}
-
 func (cs *ChunkSvr) Init(key []byte, cb *FalseCrypt.ChunkBalancer) {
 	cs.wrkey = key
 	cs.cb = cb
-	cs.log = make([]string, 0)
-}
-
-// fetch operations log
-func (cs *ChunkSvr) GetLog(timestamp int64, auth []byte) (string, error) {
-	if !cs.authorize("GetLog", timestamp, nil, auth) {
-		return "", errors.New("unauthorized")
-	}
-	cs.lock.Lock()
-	defer cs.lock.Unlock()
-	temp := strings.Join(cs.log, "\n")
-	cs.log = make([]string, 0) // reset log
-	return temp, nil
 }
 
 // fetch account, returns (account, hash)
@@ -119,6 +95,14 @@ func (cs *ChunkSvr) DelChunk(cid []byte, timestamp int64, auth []byte) error {
 	return nil
 }
 
+// fetch operations log
+func (cs *ChunkSvr) GetLog(timestamp int64, auth []byte) (string, error) {
+	if !cs.authorize("GetLog", timestamp, nil, auth) {
+		return "", errors.New("unauthorized")
+	}
+	return cs.cb.GetLog()
+}
+
 // returns existing chunk bloomfilter and checksum
 func (cs *ChunkSvr) CheckChunk(timestamp int64, auth []byte) ([]byte, []byte, error) {
 	if !cs.authorize("CheckChunk", timestamp, nil, auth) {
@@ -136,26 +120,7 @@ func (cs *ChunkSvr) TrimChunk(bloom []byte, chksum []byte, timestamp int64, auth
 	if !bytes.Equal(chksum, Bencrypt.SHA3256(bloom)) {
 		return errors.New("invalid checksum")
 	}
-	if len(bloom) < 12 {
-		return errors.New("invalid filter length")
-	}
-
-	go func() {
-		defer func() {
-			if r := recover(); r != nil {
-				cs.addLog(fmt.Sprintf("[TrimChunk] panic: %v", r))
-			}
-		}()
-		cs.addLog("[TrimChunk] start")
-		defer cs.addLog("[TrimChunk] finish")
-
-		tr, err := cs.cb.TrimChunk(bloom)
-		cs.addLog(fmt.Sprintf("[TrimChunk] delete %d chunks", tr))
-		if err != nil {
-			cs.addLog(fmt.Sprintf("[TrimChunk] error: %v", err))
-		}
-	}()
-	return nil
+	return cs.cb.TrimChunk(bloom)
 }
 
 // removes empty folders
@@ -163,8 +128,5 @@ func (cs *ChunkSvr) TrimEmpty(timestamp int64, auth []byte) error {
 	if !cs.authorize("TrimEmpty", timestamp, nil, auth) {
 		return errors.New("unauthorized")
 	}
-
-	tr, err := cs.cb.TrimEmpty()
-	cs.addLog(fmt.Sprintf("[TrimEmpty] emptied %d folders", tr))
-	return err
+	return cs.cb.TrimEmpty()
 }
