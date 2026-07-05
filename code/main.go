@@ -12,6 +12,7 @@ import (
 	"path/filepath"
 	"strconv"
 
+	"github.com/k-atusa/USAG-Lib/Bencrypt"
 	"github.com/taewook427/USAG-KOX/FalseCrypt"
 )
 
@@ -75,7 +76,7 @@ func initCS() (*ChunkSvr, error) {
 		meta.Paths = []string{"./chunks"}
 		meta.Caps = []int64{1024 * 1048576}
 		meta.Weights = []float32{1.0}
-		meta.WriteKey = []byte("write_key")
+		meta.WriteKey = Bencrypt.Random(32)
 
 		metaStr, saveErr := meta.Save()
 		if saveErr != nil {
