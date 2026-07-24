@@ -183,6 +183,7 @@ export const PostDetailModal: React.FC<PostDetailModalProps> = ({ post, onClose 
               <PostBodyContent
                 body={post.body}
                 attachments={post.attachments}
+                files={post.files}
                 onImageClick={setSelectedImage}
               />
             </div>

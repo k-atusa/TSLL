@@ -5,18 +5,32 @@ import { Download, Eye } from "lucide-react";
 import { PostAttachment } from "@/lib/types";
 import { getCleanFileName, getFileUrl, isImageFile, isVideoFile } from "@/lib/api";
 
+export interface DraftAttachmentPreview {
+  id?: string;
+  filename?: string;
+  file?: File;
+  url?: string;
+}
+
 interface PostBodyContentProps {
   body: string;
   attachments?: PostAttachment[];
+  files?: string[];
+  draftAttachments?: DraftAttachmentPreview[];
   className?: string;
   onImageClick?: (url: string) => void;
 }
 
 const ATTACHMENT_TOKEN_RE = /\[\[attach:([a-zA-Z0-9-]+)\]\]/g;
 
+interface ResolvedAttachment {
+  filename: string;
+  url: string;
+}
+
 function renderInlineParts(
   text: string,
-  attachmentsById: Map<string, PostAttachment>,
+  attachmentsById: Map<string, ResolvedAttachment>,
   onImageClick?: (url: string) => void,
 ) {
   const parts: React.ReactNode[] = [];
@@ -32,7 +46,7 @@ function renderInlineParts(
 
     const attachment = attachmentsById.get(match[1]);
     if (attachment) {
-      const url = getFileUrl(attachment.filename);
+      const url = attachment.url;
       const isImage = isImageFile(attachment.filename);
       const isVideo = isVideoFile(attachment.filename);
 
@@ -42,7 +56,7 @@ function renderInlineParts(
             <button
               type="button"
               onClick={() => onImageClick?.(url)}
-              className="group relative block w-full cursor-zoom-in"
+              className="group relative block w-full cursor-zoom-in text-left"
             >
               <img
                 src={url}
@@ -77,6 +91,8 @@ function renderInlineParts(
           </a>,
         );
       }
+    } else {
+      parts.push(<span key={`text-${index++}`}>{match[0]}</span>);
     }
 
     lastIndex = match.index + match[0].length;
@@ -92,12 +108,49 @@ function renderInlineParts(
 export const PostBodyContent: React.FC<PostBodyContentProps> = ({
   body,
   attachments = [],
+  files = [],
+  draftAttachments = [],
   className = "",
   onImageClick,
 }) => {
   if (!body.trim()) return null;
 
-  const attachmentById = new Map(attachments.map((attachment) => [attachment.id, attachment]));
+  const attachmentsById = new Map<string, ResolvedAttachment>();
+
+  // 1. Map draft attachments (local files for live preview)
+  draftAttachments.forEach((draft, idx) => {
+    let objectUrl = draft.url;
+    if (!objectUrl && draft.file) {
+      try {
+        objectUrl = URL.createObjectURL(draft.file);
+      } catch {
+        // Fallback
+      }
+    }
+    const filename = draft.filename || draft.file?.name || `file-${idx}`;
+    const entry: ResolvedAttachment = { filename, url: objectUrl || getFileUrl(filename) };
+
+    if (draft.id) attachmentsById.set(draft.id, entry);
+    if (!attachmentsById.has(`file-${idx}`)) attachmentsById.set(`file-${idx}`, entry);
+    if (!attachmentsById.has(`${idx}`)) attachmentsById.set(`${idx}`, entry);
+  });
+
+  // 2. Map post.attachments (ID + filename pairs)
+  attachments.forEach((att, idx) => {
+    const entry: ResolvedAttachment = { filename: att.filename, url: getFileUrl(att.filename) };
+    if (att.id) attachmentsById.set(att.id, entry);
+    if (!attachmentsById.has(`file-${idx}`)) attachmentsById.set(`file-${idx}`, entry);
+    if (!attachmentsById.has(`${idx}`)) attachmentsById.set(`${idx}`, entry);
+  });
+
+  // 3. Fallback map post.files (string filenames)
+  files.forEach((filename, idx) => {
+    const entry: ResolvedAttachment = { filename, url: getFileUrl(filename) };
+    if (!attachmentsById.has(`file-${idx}`)) attachmentsById.set(`file-${idx}`, entry);
+    if (!attachmentsById.has(`${idx}`)) attachmentsById.set(`${idx}`, entry);
+    if (!attachmentsById.has(filename)) attachmentsById.set(filename, entry);
+  });
+
   const lines = body.split("\n");
 
   return (
@@ -112,7 +165,7 @@ export const PostBodyContent: React.FC<PostBodyContentProps> = ({
         if (trimmed.startsWith("### ")) {
           return (
             <h3 key={lineIndex} className="mt-4 mb-2 text-xl font-bold text-cyan-300">
-              {renderInlineParts(trimmed.replace(/^###\s+/, ""), attachmentById, onImageClick)}
+              {renderInlineParts(trimmed.replace(/^###\s+/, ""), attachmentsById, onImageClick)}
             </h3>
           );
         }
@@ -120,7 +173,7 @@ export const PostBodyContent: React.FC<PostBodyContentProps> = ({
         if (trimmed.startsWith("## ")) {
           return (
             <h2 key={lineIndex} className="mt-5 mb-2 border-b border-slate-800 pb-1 text-2xl font-bold text-white">
-              {renderInlineParts(trimmed.replace(/^##\s+/, ""), attachmentById, onImageClick)}
+              {renderInlineParts(trimmed.replace(/^##\s+/, ""), attachmentsById, onImageClick)}
             </h2>
           );
         }
@@ -128,7 +181,7 @@ export const PostBodyContent: React.FC<PostBodyContentProps> = ({
         if (trimmed.startsWith("# ")) {
           return (
             <h1 key={lineIndex} className="mt-6 mb-3 text-3xl font-extrabold text-white">
-              {renderInlineParts(trimmed.replace(/^#\s+/, ""), attachmentById, onImageClick)}
+              {renderInlineParts(trimmed.replace(/^#\s+/, ""), attachmentsById, onImageClick)}
             </h1>
           );
         }
@@ -139,7 +192,7 @@ export const PostBodyContent: React.FC<PostBodyContentProps> = ({
               key={lineIndex}
               className="my-2 rounded-r-sm border-l-4 border-cyan-500 bg-slate-950/40 py-1.5 pl-4 italic text-slate-300"
             >
-              {renderInlineParts(trimmed.replace(/^>\s+/, ""), attachmentById, onImageClick)}
+              {renderInlineParts(trimmed.replace(/^>\s+/, ""), attachmentsById, onImageClick)}
             </blockquote>
           );
         }
@@ -148,14 +201,14 @@ export const PostBodyContent: React.FC<PostBodyContentProps> = ({
           return (
             <div key={lineIndex} className="my-1 ml-5 flex items-start gap-2 text-slate-200">
               <span className="mt-1 h-1.5 w-1.5 rounded-full bg-cyan-400" />
-              <span>{renderInlineParts(trimmed.replace(/^[-*]\s+/, ""), attachmentById, onImageClick)}</span>
+              <span>{renderInlineParts(trimmed.replace(/^[-*]\s+/, ""), attachmentsById, onImageClick)}</span>
             </div>
           );
         }
 
         return (
           <div key={lineIndex} className="my-1 text-slate-200 leading-relaxed whitespace-pre-wrap">
-            {renderInlineParts(line, attachmentById, onImageClick)}
+            {renderInlineParts(line, attachmentsById, onImageClick)}
           </div>
         );
       })}

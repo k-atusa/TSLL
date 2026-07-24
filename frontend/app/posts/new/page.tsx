@@ -333,7 +333,15 @@ export default function CreatePostPage() {
             ) : (
               /* Live Preview Mode */
               <div className="min-h-[280px] p-6 bg-slate-950 rounded-md border border-slate-800 font-sans">
-                <PostBodyContent body={body} className="space-y-1" />
+                <PostBodyContent
+                  body={body}
+                  draftAttachments={attachments.map((att) => ({
+                    id: att.id,
+                    filename: att.file.name,
+                    file: att.file,
+                  }))}
+                  className="space-y-1"
+                />
               </div>
             )}
           </div>

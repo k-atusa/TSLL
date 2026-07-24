@@ -20,6 +20,7 @@ import {
 } from "lucide-react";
 import { Header } from "@/components/Header";
 import { CreatePostModal } from "@/components/CreatePostModal";
+import { PostBodyContent } from "@/components/PostBodyContent";
 import {
   fetchPostDetail,
   formatTimeAgo,
@@ -300,8 +301,13 @@ export default function PostDetailPage({ params }: PageProps) {
 
           {/* Post Content Body */}
           {post.body && (
-            <div className="prose prose-invert max-w-none text-base md:text-lg text-slate-100 leading-relaxed whitespace-pre-wrap font-sans py-2">
-              {post.body}
+            <div className="prose prose-invert max-w-none text-base md:text-lg text-slate-100 leading-relaxed font-sans py-2">
+              <PostBodyContent
+                body={post.body}
+                attachments={post.attachments}
+                files={post.files}
+                onImageClick={setSelectedImage}
+              />
             </div>
           )}
 
