@@ -23,6 +23,13 @@ type Post struct {
 	CreatedAt int64    `json:"createdAt"`
 }
 
+type StorageStats struct {
+	UsedBytes int64 `json:"usedBytes"`
+	CapBytes  int64 `json:"capBytes"`
+	PostCount int   `json:"postCount"`
+	FileCount int   `json:"fileCount"`
+}
+
 var mu sync.Mutex // For synchronizing post creations and deletions
 
 // get directory size
@@ -208,4 +215,35 @@ func handleCreatePost(w http.ResponseWriter, r *http.Request) {
 	mu.Unlock()
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(post)
+}
+
+// get storage stats
+func handleGetStats(w http.ResponseWriter, r *http.Request) {
+	mu.Lock()
+	defer mu.Unlock()
+
+	usedSize, _ := getDirSize(config.PostDir)
+
+	postsDir := filepath.Join(config.PostDir, "posts")
+	postFiles, _ := os.ReadDir(postsDir)
+	postCount := 0
+	for _, f := range postFiles {
+		if strings.HasSuffix(f.Name(), ".json") {
+			postCount++
+		}
+	}
+
+	filesDir := filepath.Join(config.PostDir, "files")
+	attachedFiles, _ := os.ReadDir(filesDir)
+	fileCount := len(attachedFiles)
+
+	stats := StorageStats{
+		UsedBytes: usedSize,
+		CapBytes:  config.PostCap,
+		PostCount: postCount,
+		FileCount: fileCount,
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(stats)
 }

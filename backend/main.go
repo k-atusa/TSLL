@@ -321,6 +321,16 @@ func main() {
 			http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
 		}
 	})
+	http.HandleFunc("/api/com/stats", func(w http.ResponseWriter, r *http.Request) {
+		if enableCORS(w, r) {
+			return
+		}
+		if r.Method == http.MethodGet {
+			handleGetStats(w, r)
+		} else {
+			http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+		}
+	})
 
 	// register chunk handlers
 	cs, err := initCS()

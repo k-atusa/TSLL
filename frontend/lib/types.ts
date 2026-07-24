@@ -6,6 +6,13 @@ export interface Post {
   createdAt: number; // nanoseconds timestamp
 }
 
+export interface StorageStats {
+  usedBytes: number;
+  capBytes: number;
+  postCount: number;
+  fileCount: number;
+}
+
 export type BoardCategory = 'all' | 'general' | 'crypto' | 'tech' | 'lounge' | 'files';
 
 export type SortMode = 'latest' | 'popular' | 'media';

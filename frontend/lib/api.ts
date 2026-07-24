@@ -1,4 +1,4 @@
-import { Post } from "./types";
+import { Post, StorageStats } from "./types";
 
 const API_BASE = "";
 
@@ -80,6 +80,35 @@ export async function fetchPosts(): Promise<Post[]> {
   } catch (err) {
     console.warn("API fetch error, returning demo fallback posts if server offline", err);
     return getFallbackPosts();
+  }
+}
+
+// Helper: Format byte counts cleanly (e.g. 104857600 -> 100 MB)
+export function formatBytes(bytes: number, decimals = 2): string {
+  if (!bytes || bytes <= 0) return "0 B";
+  const k = 1024;
+  const dm = decimals < 0 ? 0 : decimals;
+  const sizes = ["B", "KB", "MB", "GB", "TB"];
+  const i = Math.floor(Math.log(bytes) / Math.log(k));
+  return `${parseFloat((bytes / Math.pow(k, i)).toFixed(dm))} ${sizes[i]}`;
+}
+
+// API: Fetch backend storage statistics
+export async function fetchStorageStats(): Promise<StorageStats> {
+  try {
+    const res = await fetch(`${API_BASE}/api/com/stats`, {
+      cache: "no-store",
+    });
+    if (!res.ok) throw new Error(`HTTP error ${res.status}`);
+    return await res.json();
+  } catch (err) {
+    console.warn("API fetch stats error, using default", err);
+    return {
+      usedBytes: 1024 * 350,
+      capBytes: 104857600, // 100MB
+      postCount: 3,
+      fileCount: 0,
+    };
   }
 }
 

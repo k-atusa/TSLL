@@ -6,12 +6,13 @@ import { StorageBar } from "@/components/StorageBar";
 import { PostCard } from "@/components/PostCard";
 import { PostDetailModal } from "@/components/PostDetailModal";
 import { CreatePostModal } from "@/components/CreatePostModal";
-import { fetchPosts } from "@/lib/api";
-import { BoardCategory, Post, SortMode } from "@/lib/types";
+import { fetchPosts, fetchStorageStats } from "@/lib/api";
+import { BoardCategory, Post, SortMode, StorageStats } from "@/lib/types";
 import { Shield, RefreshCw, Layers, Sparkles, MessageSquare } from "lucide-react";
 
 export default function Home() {
   const [posts, setPosts] = useState<Post[]>([]);
+  const [stats, setStats] = useState<StorageStats | null>(null);
   const [loading, setLoading] = useState(true);
   const [activeCategory, setActiveCategory] = useState<BoardCategory>("all");
   const [searchQuery, setSearchQuery] = useState("");
@@ -22,8 +23,9 @@ export default function Home() {
 
   const loadPosts = async () => {
     setLoading(true);
-    const data = await fetchPosts();
+    const [data, statsData] = await Promise.all([fetchPosts(), fetchStorageStats()]);
     setPosts(data);
+    setStats(statsData);
     setLoading(false);
   };
 
@@ -78,6 +80,7 @@ export default function Home() {
 
   const handlePostCreated = (newPost: Post) => {
     setPosts((prev) => [newPost, ...prev]);
+    fetchStorageStats().then((s) => setStats(s)).catch(() => {});
   };
 
   return (
@@ -97,7 +100,7 @@ export default function Home() {
       {/* Main Board Layout Container */}
       <main className="flex-1 max-w-6xl w-full mx-auto px-4 py-6 space-y-6">
         {/* Storage Capacity Gauge & Notice */}
-        <StorageBar posts={posts} />
+        <StorageBar posts={posts} stats={stats} />
 
         {/* Hero Banner / Board Status */}
         <div className="relative rounded-2xl bg-gradient-to-r from-slate-900 via-slate-900/90 to-cyan-950/40 border border-slate-800/80 p-5 md:p-6 overflow-hidden">
