@@ -168,9 +168,9 @@ export default function CreatePostPage() {
         activeCategory="all"
         onSelectCategory={() => router.push("/")}
         searchQuery=""
-        onSearchChange={() => {}}
+        onSearchChange={() => { }}
         sortMode="latest"
-        onSortChange={() => {}}
+        onSortChange={() => { }}
         postCount={0}
       />
 
@@ -206,11 +206,10 @@ export default function CreatePostPage() {
                   key={cat.id}
                   type="button"
                   onClick={() => setSelectedCategory(cat.id)}
-                  className={`px-3.5 py-2 rounded-md text-xs font-medium transition-all cursor-pointer ${
-                    selectedCategory === cat.id
+                  className={`px-3.5 py-2 rounded-md text-xs font-medium transition-all cursor-pointer ${selectedCategory === cat.id
                       ? "bg-cyan-500/20 text-cyan-300 border border-cyan-500/50 shadow-sm font-bold"
                       : "bg-slate-950 text-slate-400 border border-slate-800 hover:text-white"
-                  }`}
+                    }`}
                 >
                   {cat.icon} {cat.name}
                 </button>
@@ -245,9 +244,8 @@ export default function CreatePostPage() {
                 <button
                   type="button"
                   onClick={() => setActiveTab("edit")}
-                  className={`flex items-center space-x-1.5 px-3 py-1 rounded transition-colors cursor-pointer ${
-                    activeTab === "edit" ? "bg-slate-800 text-cyan-300 font-bold" : "text-slate-400 hover:text-white"
-                  }`}
+                  className={`flex items-center space-x-1.5 px-3 py-1 rounded transition-colors cursor-pointer ${activeTab === "edit" ? "bg-slate-800 text-cyan-300 font-bold" : "text-slate-400 hover:text-white"
+                    }`}
                 >
                   <Edit3 className="w-3.5 h-3.5" />
                   <span>에디터</span>
@@ -256,9 +254,8 @@ export default function CreatePostPage() {
                 <button
                   type="button"
                   onClick={() => setActiveTab("preview")}
-                  className={`flex items-center space-x-1.5 px-3 py-1 rounded transition-colors cursor-pointer ${
-                    activeTab === "preview" ? "bg-slate-800 text-cyan-300 font-bold" : "text-slate-400 hover:text-white"
-                  }`}
+                  className={`flex items-center space-x-1.5 px-3 py-1 rounded transition-colors cursor-pointer ${activeTab === "preview" ? "bg-slate-800 text-cyan-300 font-bold" : "text-slate-400 hover:text-white"
+                    }`}
                 >
                   <Eye className="w-3.5 h-3.5" />
                   <span>미리보기</span>
@@ -367,11 +364,10 @@ export default function CreatePostPage() {
               }}
               onDragLeave={() => setDragActive(false)}
               onDrop={handleDrop}
-              className={`border-2 border-dashed rounded-md p-6 text-center transition-colors cursor-pointer ${
-                dragActive
+              className={`border-2 border-dashed rounded-md p-6 text-center transition-colors cursor-pointer ${dragActive
                   ? "border-cyan-400 bg-cyan-950/20"
                   : "border-slate-800 bg-slate-950 hover:border-slate-700"
-              }`}
+                }`}
             >
               <input
                 type="file"

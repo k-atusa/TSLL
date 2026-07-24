@@ -149,9 +149,9 @@ export default function PostDetailPage({ params }: PageProps) {
           activeCategory="all"
           onSelectCategory={() => router.push("/")}
           searchQuery=""
-          onSearchChange={() => {}}
+          onSearchChange={() => { }}
           sortMode="latest"
-          onSortChange={() => {}}
+          onSortChange={() => { }}
           postCount={0}
         />
         <main className="flex-1 max-w-4xl w-full mx-auto px-4 py-8 space-y-6">
@@ -215,9 +215,9 @@ export default function PostDetailPage({ params }: PageProps) {
         activeCategory="all"
         onSelectCategory={() => router.push("/")}
         searchQuery=""
-        onSearchChange={() => {}}
+        onSearchChange={() => { }}
         sortMode="latest"
-        onSortChange={() => {}}
+        onSortChange={() => { }}
         postCount={0}
       />
 
@@ -366,11 +366,10 @@ export default function PostDetailPage({ params }: PageProps) {
           <div className="pt-6 border-t border-slate-800/80 flex items-center space-x-3 font-mono">
             <button
               onClick={handleLike}
-              className={`flex items-center space-x-2 px-4 py-2 rounded-md border text-xs md:text-sm font-semibold transition-all cursor-pointer ${
-                hasLiked
+              className={`flex items-center space-x-2 px-4 py-2 rounded-md border text-xs md:text-sm font-semibold transition-all cursor-pointer ${hasLiked
                   ? "bg-cyan-500/20 text-cyan-300 border-cyan-500/50 font-bold"
                   : "bg-slate-950 text-slate-300 border-slate-800 hover:text-white hover:border-slate-700"
-              }`}
+                }`}
             >
               <ThumbsUp className={`w-4 h-4 ${hasLiked ? "text-cyan-400 fill-cyan-400/20" : "text-cyan-400"}`} />
               <span>개추 ({likesCount})</span>
@@ -378,11 +377,10 @@ export default function PostDetailPage({ params }: PageProps) {
 
             <button
               onClick={handleDislike}
-              className={`flex items-center space-x-2 px-4 py-2 rounded-md border text-xs md:text-sm font-semibold transition-all cursor-pointer ${
-                hasDisliked
+              className={`flex items-center space-x-2 px-4 py-2 rounded-md border text-xs md:text-sm font-semibold transition-all cursor-pointer ${hasDisliked
                   ? "bg-rose-500/20 text-rose-300 border-rose-500/50 font-bold"
                   : "bg-slate-950 text-slate-300 border-slate-800 hover:text-white hover:border-slate-700"
-              }`}
+                }`}
             >
               <ThumbsDown className={`w-4 h-4 ${hasDisliked ? "text-rose-400 fill-rose-400/20" : "text-rose-400"}`} />
               <span>비추 ({dislikesCount})</span>

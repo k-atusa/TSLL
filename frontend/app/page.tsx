@@ -119,19 +119,17 @@ export default function Home() {
                   <button
                     key={g.id}
                     onClick={() => setActiveCategory(g.id)}
-                    className={`w-full text-left px-3 py-2.5 rounded text-xs font-medium flex items-center justify-between transition-all cursor-pointer ${
-                      isSelected
+                    className={`w-full text-left px-3 py-2.5 rounded text-xs font-medium flex items-center justify-between transition-all cursor-pointer ${isSelected
                         ? "bg-cyan-500/20 text-cyan-300 border border-cyan-500/40 font-bold shadow-sm"
                         : "text-slate-400 hover:text-slate-200 hover:bg-slate-800/60 border border-transparent"
-                    }`}
+                      }`}
                   >
                     <div className="flex items-center space-x-2 truncate">
                       <span>{g.icon}</span>
                       <span className="truncate">{g.name}</span>
                     </div>
-                    <span className={`text-[10px] font-mono px-1.5 py-0.5 rounded ${
-                      isSelected ? "bg-cyan-500 text-slate-950 font-bold" : "bg-slate-950 text-slate-500"
-                    }`}>
+                    <span className={`text-[10px] font-mono px-1.5 py-0.5 rounded ${isSelected ? "bg-cyan-500 text-slate-950 font-bold" : "bg-slate-950 text-slate-500"
+                      }`}>
                       {g.shortName}
                     </span>
                   </button>
@@ -157,25 +155,22 @@ export default function Home() {
               <div className="flex items-center space-x-1 bg-slate-950 p-1 rounded border border-slate-800 text-xs font-mono">
                 <button
                   onClick={() => setSortMode("latest")}
-                  className={`px-2.5 py-1 rounded transition-colors cursor-pointer ${
-                    sortMode === "latest" ? "bg-cyan-500 text-slate-950 font-bold" : "text-slate-400 hover:text-white"
-                  }`}
+                  className={`px-2.5 py-1 rounded transition-colors cursor-pointer ${sortMode === "latest" ? "bg-cyan-500 text-slate-950 font-bold" : "text-slate-400 hover:text-white"
+                    }`}
                 >
                   최신순 ({filteredPosts.length})
                 </button>
                 <button
                   onClick={() => setSortMode("popular")}
-                  className={`px-2.5 py-1 rounded transition-colors cursor-pointer ${
-                    sortMode === "popular" ? "bg-cyan-500 text-slate-950 font-bold" : "text-slate-400 hover:text-white"
-                  }`}
+                  className={`px-2.5 py-1 rounded transition-colors cursor-pointer ${sortMode === "popular" ? "bg-cyan-500 text-slate-950 font-bold" : "text-slate-400 hover:text-white"
+                    }`}
                 >
                   인기순
                 </button>
                 <button
                   onClick={() => setSortMode("media")}
-                  className={`px-2.5 py-1 rounded transition-colors cursor-pointer ${
-                    sortMode === "media" ? "bg-cyan-500 text-slate-950 font-bold" : "text-slate-400 hover:text-white"
-                  }`}
+                  className={`px-2.5 py-1 rounded transition-colors cursor-pointer ${sortMode === "media" ? "bg-cyan-500 text-slate-950 font-bold" : "text-slate-400 hover:text-white"
+                    }`}
                 >
                   미디어순
                 </button>
