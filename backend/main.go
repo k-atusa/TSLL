@@ -275,31 +275,24 @@ func main() {
 	}()
 
 	initEnv()
-	allowedFiles := map[string]bool{
-		"/":            true,
-		"/index.html":  true,
-		"/app.js":      true,
-		"/favicon.png": true,
-	} // whitelist of files to serve
 
-	// HTTP frontend handler
-	http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
-		path := filepath.Clean(r.URL.Path)
-		path = filepath.ToSlash(path)
-		if !allowedFiles[path] {
-			http.Error(w, "Forbidden", http.StatusForbidden)
-			return
+	enableCORS := func(w http.ResponseWriter, r *http.Request) bool {
+		w.Header().Set("Access-Control-Allow-Origin", "*")
+		w.Header().Set("Access-Control-Allow-Methods", "GET, POST, OPTIONS, PUT, DELETE")
+		w.Header().Set("Access-Control-Allow-Headers", "Content-Type, Authorization, Chksum")
+		if r.Method == http.MethodOptions {
+			w.WriteHeader(http.StatusOK)
+			return true
 		}
-		if path == "/" {
-			http.ServeFile(w, r, "./index.html")
-		} else {
-			http.ServeFile(w, r, filepath.Join(".", path))
-		}
-	})
+		return false
+	}
 
 	// HTTP files handler
 	filesFs := http.FileServer(http.Dir(filepath.Join(config.PostDir, "files")))
 	http.HandleFunc("/api/com/files/", func(w http.ResponseWriter, r *http.Request) {
+		if enableCORS(w, r) {
+			return
+		}
 		w.Header().Set("Content-Security-Policy", "default-src 'none'; img-src 'self'; media-src 'self'; style-src 'unsafe-inline'") // prevent XSS
 		w.Header().Set("X-Content-Type-Options", "nosniff")
 		http.StripPrefix("/api/com/files/", filesFs).ServeHTTP(w, r)
@@ -307,6 +300,9 @@ func main() {
 
 	// register posting handlers
 	http.HandleFunc("/api/com/posts", func(w http.ResponseWriter, r *http.Request) {
+		if enableCORS(w, r) {
+			return
+		}
 		if r.Method == http.MethodGet {
 			handleGetPosts(w, r)
 		} else if r.Method == http.MethodPost {
@@ -316,6 +312,9 @@ func main() {
 		}
 	})
 	http.HandleFunc("/api/com/posts/", func(w http.ResponseWriter, r *http.Request) {
+		if enableCORS(w, r) {
+			return
+		}
 		if r.Method == http.MethodGet {
 			handleGetPostDetail(w, r)
 		} else {
