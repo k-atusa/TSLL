@@ -40,7 +40,7 @@ export const Header: React.FC<HeaderProps> = ({
       <div className="max-w-6xl mx-auto px-4 py-3 flex flex-wrap items-center justify-between gap-4">
         {/* Logo & Brand */}
         <div className="flex items-center space-x-3">
-          <div className="relative flex items-center justify-center w-9 h-9 rounded-md bg-slate-900 border border-slate-800 overflow-hidden shadow-sm">
+          <div className="flex items-center justify-center w-9 h-9 rounded-md bg-slate-900 border border-slate-800 overflow-hidden shadow-sm">
             <img
               src="/logo.png"
               alt="FC Community Logo"
@@ -49,7 +49,6 @@ export const Header: React.FC<HeaderProps> = ({
                 (e.target as HTMLElement).style.display = "none";
               }}
             />
-            <span className="absolute -top-1 -right-1 w-2 h-2 rounded-full bg-cyan-400 ring-4 ring-slate-950"></span>
           </div>
           <div>
             <div className="flex items-center space-x-2">
