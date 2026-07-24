@@ -176,7 +176,6 @@ export default function Home() {
               <PostCard
                 key={post.id}
                 post={post}
-                onOpenDetail={(p) => setSelectedPostDetail(p)}
               />
             ))}
           </div>
@@ -201,11 +200,6 @@ export default function Home() {
         onClose={() => setIsCreateModalOpen(false)}
         onPostCreated={handlePostCreated}
         defaultCategory={activeCategory !== "all" ? activeCategory : "general"}
-      />
-
-      <PostDetailModal
-        post={selectedPostDetail}
-        onClose={() => setSelectedPostDetail(null)}
       />
     </div>
   );

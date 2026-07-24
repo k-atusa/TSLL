@@ -13,6 +13,7 @@ import {
   MessageSquare,
   Paperclip,
 } from "lucide-react";
+import Link from "next/link";
 import { Post } from "@/lib/types";
 import {
   formatTimeAgo,
@@ -25,7 +26,7 @@ import {
 
 interface PostCardProps {
   post: Post;
-  onOpenDetail: (post: Post) => void;
+  onOpenDetail?: (post: Post) => void;
 }
 
 export const PostCard: React.FC<PostCardProps> = ({ post, onOpenDetail }) => {
@@ -52,6 +53,7 @@ export const PostCard: React.FC<PostCardProps> = ({ post, onOpenDetail }) => {
   const cleanTitle = tagMatch ? post.title.replace(/^\[.*?\]\s*/, "") : post.title;
 
   const handleUpvote = (e: React.MouseEvent) => {
+    e.preventDefault();
     e.stopPropagation();
     if (hasUpvoted) {
       setReactions((r) => ({ ...r, upvote: r.upvote - 1 }));
@@ -63,6 +65,7 @@ export const PostCard: React.FC<PostCardProps> = ({ post, onOpenDetail }) => {
   };
 
   const handleFire = (e: React.MouseEvent) => {
+    e.preventDefault();
     e.stopPropagation();
     if (hasFired) {
       setReactions((r) => ({ ...r, fire: r.fire - 1 }));
@@ -74,6 +77,7 @@ export const PostCard: React.FC<PostCardProps> = ({ post, onOpenDetail }) => {
   };
 
   const handleShield = (e: React.MouseEvent) => {
+    e.preventDefault();
     e.stopPropagation();
     if (hasShielded) {
       setReactions((r) => ({ ...r, shield: r.shield - 1 }));
@@ -85,18 +89,19 @@ export const PostCard: React.FC<PostCardProps> = ({ post, onOpenDetail }) => {
   };
 
   const handleCopyLink = (e: React.MouseEvent) => {
+    e.preventDefault();
     e.stopPropagation();
-    const url = `${window.location.origin}#post-${post.id}`;
+    const url = `${window.location.origin}/posts/${post.id}`;
     navigator.clipboard.writeText(url);
     setCopied(true);
     setTimeout(() => setCopied(false), 2000);
   };
 
   return (
-    <article
-      onClick={() => onOpenDetail(post)}
-      className="group relative bg-slate-900/70 border border-slate-800/90 hover:border-cyan-500/50 rounded-md p-4 md:p-5 transition-all duration-200 hover:shadow-[0_0_25px_rgba(6,182,212,0.12)] cursor-pointer"
-    >
+    <Link href={`/posts/${post.id}`} className="block group">
+      <article
+        className="relative bg-slate-900/70 border border-slate-800/90 group-hover:border-cyan-500/50 rounded-md p-4 md:p-5 transition-all duration-200 group-hover:shadow-[0_0_25px_rgba(6,182,212,0.12)] cursor-pointer"
+      >
       {/* Header info */}
       <div className="flex items-center justify-between gap-3 mb-3">
         <div className="flex items-center space-x-2.5">
@@ -242,5 +247,6 @@ export const PostCard: React.FC<PostCardProps> = ({ post, onOpenDetail }) => {
         </div>
       </div>
     </article>
-  );
+  </Link>
+);
 };
