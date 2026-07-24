@@ -284,7 +284,7 @@ Feel free to download the attachments below or test uploading your own encrypted
 
           {/* Post Content Body */}
           {post.body && (
-            <div className="prose prose-invert max-w-none text-base md:text-lg text-slate-200 leading-relaxed bg-slate-950/60 p-6 rounded-md border border-slate-800/80 whitespace-pre-wrap font-sans">
+            <div className="prose prose-invert max-w-none text-base md:text-lg text-slate-100 leading-relaxed whitespace-pre-wrap font-sans py-2">
               {post.body}
             </div>
           )}
@@ -421,11 +421,11 @@ Feel free to download the attachments below or test uploading your own encrypted
           </div>
 
           {/* Comment List */}
-          <div className="space-y-4">
+          <div className="divide-y divide-slate-800/60">
             {comments.map((c) => (
               <div
                 key={c.id}
-                className="p-4 rounded-md bg-slate-950/70 border border-slate-800/90 space-y-2"
+                className="py-4 space-y-2"
               >
                 <div className="flex items-center justify-between text-xs">
                   <div className="flex items-center space-x-2">
