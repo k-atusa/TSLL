@@ -1,11 +1,10 @@
 "use client";
 
 import React, { useEffect, useState, useMemo } from "react";
+import Link from "next/link";
 import { Header } from "@/components/Header";
 import { StorageBar } from "@/components/StorageBar";
 import { PostCard } from "@/components/PostCard";
-import { PostDetailModal } from "@/components/PostDetailModal";
-import { CreatePostModal } from "@/components/CreatePostModal";
 import { fetchPosts, fetchStorageStats } from "@/lib/api";
 import { BoardCategory, Post, SortMode, StorageStats } from "@/lib/types";
 import { Shield, RefreshCw, Layers, Sparkles, MessageSquare } from "lucide-react";
@@ -166,12 +165,12 @@ export default function Home() {
             <p className="text-xs text-slate-500 max-w-sm mx-auto">
               No anonymous posts match your current filter or search criteria. Be the first to create one!
             </p>
-            <button
-              onClick={() => setIsCreateModalOpen(true)}
+            <Link
+              href="/posts/new"
               className="mt-2 px-4 py-2 text-xs font-mono font-bold rounded-md bg-cyan-500 hover:bg-cyan-400 text-slate-950 transition-all shadow-md inline-flex items-center space-x-1.5 cursor-pointer"
             >
               <span>+ Create First Post</span>
-            </button>
+            </Link>
           </div>
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -196,14 +195,6 @@ export default function Home() {
           <StorageBar posts={posts} stats={stats} />
         </div>
       </footer>
-
-      {/* Modals */}
-      <CreatePostModal
-        isOpen={isCreateModalOpen}
-        onClose={() => setIsCreateModalOpen(false)}
-        onPostCreated={handlePostCreated}
-        defaultCategory={activeCategory !== "all" ? activeCategory : "general"}
-      />
     </div>
   );
 }

@@ -1,6 +1,7 @@
 "use client";
 
 import React from "react";
+import Link from "next/link";
 import { Shield, Plus, Search, Terminal, Newspaper, Cpu, FileCode2, Lock, Radio, Flame } from "lucide-react";
 import { BoardCategory, SortMode } from "@/lib/types";
 
@@ -11,7 +12,7 @@ interface HeaderProps {
   onSearchChange: (q: string) => void;
   sortMode: SortMode;
   onSortChange: (mode: SortMode) => void;
-  onOpenCreateModal: () => void;
+  onOpenCreateModal?: () => void;
   postCount: number;
 }
 
@@ -85,13 +86,13 @@ export const Header: React.FC<HeaderProps> = ({
             )}
           </div>
 
-          <button
-            onClick={onOpenCreateModal}
+          <Link
+            href="/posts/new"
             className="flex items-center space-x-1.5 px-4 py-2 text-xs font-semibold rounded-md bg-gradient-to-r from-cyan-500 to-blue-600 hover:from-cyan-400 hover:to-blue-500 text-white shadow-md shadow-cyan-500/20 hover:shadow-cyan-500/35 transition-all duration-200 active:scale-95 whitespace-nowrap cursor-pointer"
           >
             <Plus className="w-4 h-4" />
             <span>New Post</span>
-          </button>
+          </Link>
         </div>
       </div>
 

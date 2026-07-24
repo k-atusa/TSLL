@@ -378,7 +378,7 @@ export default function PostDetailPage({ params }: PageProps) {
               }`}
             >
               <ThumbsUp className={`w-4 h-4 ${hasLiked ? "text-cyan-400 fill-cyan-400/20" : "text-cyan-400"}`} />
-              <span>Recommend ({likesCount})</span>
+              <span>Like ({likesCount})</span>
             </button>
 
             <button
