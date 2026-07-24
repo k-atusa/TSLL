@@ -48,7 +48,7 @@ export const CreatePostModal: React.FC<CreatePostModalProps> = ({
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   // Generate transient anon ID for modal preview
-  const previewAnon = generateAnonId(Date.now().toString());
+  const previewAnon = React.useMemo(() => generateAnonId("anon-transient-preview"), []);
 
   if (!isOpen) return null;
 
