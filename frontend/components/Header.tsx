@@ -45,6 +45,7 @@ export const Header: React.FC<HeaderProps> = ({
               src="/logo.png"
               alt="FC Community Logo"
               className="w-full h-full object-cover"
+              suppressHydrationWarning
               onError={(e) => {
                 (e.target as HTMLElement).style.display = "none";
               }}
