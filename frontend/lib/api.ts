@@ -52,6 +52,23 @@ export function generateAnonId(id: string): { handle: string; color: string } {
   };
 }
 
+export function normalizeAnonHandle(handle?: string | null): string {
+  if (!handle) return "";
+  return handle.replace(/^Anon#/i, "익명#");
+}
+
+export function getHandleBadgeText(handle?: string | null): string {
+  const cleanedHandle = normalizeAnonHandle(handle);
+  if (!cleanedHandle) return "?";
+  const suffix = cleanedHandle.includes("#") ? cleanedHandle.split("#").pop() || cleanedHandle : cleanedHandle;
+  return suffix.slice(0, 2).toUpperCase();
+}
+
+export function generateRandomAnonId(): { handle: string; color: string } {
+  const seed = globalThis.crypto?.randomUUID?.() ?? `${Date.now()}-${Math.random()}`;
+  return generateAnonId(seed);
+}
+
 // Helper: Get file URL for serving from Go backend
 export function getFileUrl(filename: string): string {
   return `${API_BASE}/api/com/files/${encodeURIComponent(filename)}`;
@@ -135,10 +152,18 @@ export async function fetchPostDetail(id: string): Promise<Post | null> {
 }
 
 // API: Create new post
-export async function createPost(title: string, body: string, files: File[]): Promise<Post> {
+export async function createPost(
+  title: string,
+  body: string,
+  files: File[],
+  handle?: string,
+): Promise<Post> {
   const formData = new FormData();
   formData.append("title", title);
   formData.append("body", body);
+  if (handle) {
+    formData.append("handle", handle);
+  }
 
   files.forEach((file) => {
     formData.append("files", file);
@@ -176,13 +201,13 @@ export async function dislikePost(id: string): Promise<Post> {
 }
 
 // API: Add comment to post
-export async function addComment(id: string, body: string): Promise<Post> {
+export async function addComment(id: string, body: string, handle?: string): Promise<Post> {
   const res = await fetch(`${API_BASE}/api/com/posts/${id}/comments`, {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
     },
-    body: JSON.stringify({ body }),
+    body: JSON.stringify({ body, handle }),
   });
   if (!res.ok) throw new Error("Failed to post comment");
   return await res.json();

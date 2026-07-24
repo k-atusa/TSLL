@@ -19,10 +19,13 @@ import { Post } from "@/lib/types";
 import {
   formatTimeAgo,
   generateAnonId,
+  generateRandomAnonId,
+  getHandleBadgeText,
   getFileUrl,
   isImageFile,
   isVideoFile,
   getCleanFileName,
+  normalizeAnonHandle,
 } from "@/lib/api";
 
 interface PostDetailModalProps {
@@ -40,25 +43,28 @@ export const PostDetailModal: React.FC<PostDetailModalProps> = ({ post, onClose 
   >([
     {
       id: "c1",
-      handle: "Anon#9f2a41",
+      handle: "익명#9f2a41",
       body: "Thanks for posting this. Checking file checksums now.",
       time: "10m ago",
       color: "from-blue-500 to-cyan-500",
     },
     {
       id: "c2",
-      handle: "Anon#4b8e12",
+      handle: "익명#4b8e12",
       body: "Confirmed readable via FalseCrypt node.",
       time: "4m ago",
       color: "from-purple-500 to-indigo-500",
     },
   ]);
+  const [newCommentHandle, setNewCommentHandle] = useState("");
   const [newCommentBody, setNewCommentBody] = useState("");
 
   if (!post) return null;
 
-  const anonInfo = generateAnonId(post.id);
+  const displayHandle = post.handle ? normalizeAnonHandle(post.handle) || post.handle : generateAnonId(post.id).handle;
+  const anonInfo = post.handle ? generateAnonId(post.handle) : generateAnonId(post.id);
   const formattedTime = formatTimeAgo(post.createdAt);
+  const previewAnon = generateRandomAnonId();
 
   const handleCopyLink = () => {
     const url = `${window.location.origin}#post-${post.id}`;
@@ -71,7 +77,8 @@ export const PostDetailModal: React.FC<PostDetailModalProps> = ({ post, onClose 
     e.preventDefault();
     if (!newCommentBody.trim()) return;
 
-    const myAnon = generateAnonId(Date.now().toString());
+    const submittedHandle = newCommentHandle.trim();
+    const myAnon = submittedHandle ? { handle: submittedHandle, color: generateAnonId(submittedHandle).color } : generateRandomAnonId();
     setComments((prev) => [
       ...prev,
       {
@@ -82,6 +89,7 @@ export const PostDetailModal: React.FC<PostDetailModalProps> = ({ post, onClose 
         color: myAnon.color,
       },
     ]);
+    setNewCommentHandle("");
     setNewCommentBody("");
   };
 
@@ -128,12 +136,12 @@ export const PostDetailModal: React.FC<PostDetailModalProps> = ({ post, onClose 
             <div
               className={`w-9 h-9 rounded-md bg-gradient-to-br ${anonInfo.color} flex items-center justify-center text-white font-mono font-bold text-sm shadow-md`}
             >
-              {anonInfo.handle.slice(5, 7).toUpperCase()}
+              {getHandleBadgeText(displayHandle)}
             </div>
             <div>
               <div className="flex items-center space-x-2">
                 <span className="font-mono text-sm font-semibold text-white">
-                  {anonInfo.handle}
+                  {displayHandle}
                 </span>
                 <span className="px-2 py-0.5 text-[10px] font-mono rounded-sm bg-cyan-500/10 text-cyan-400 border border-cyan-500/30">
                   VERIFIED ANONYMOUS
@@ -260,7 +268,7 @@ export const PostDetailModal: React.FC<PostDetailModalProps> = ({ post, onClose 
                   className="p-3 rounded-md bg-slate-950/60 border border-slate-800/70 text-xs space-y-1"
                 >
                   <div className="flex items-center justify-between text-[11px]">
-                    <span className="font-mono font-semibold text-cyan-400">{c.handle}</span>
+                    <span className="font-mono font-semibold text-cyan-400">{normalizeAnonHandle(c.handle) || c.handle}</span>
                     <span className="font-mono text-slate-500">{c.time}</span>
                   </div>
                   <p className="text-slate-300 leading-normal">{c.body}</p>
@@ -269,21 +277,30 @@ export const PostDetailModal: React.FC<PostDetailModalProps> = ({ post, onClose 
             </div>
 
             {/* Post Reply Form */}
-            <form onSubmit={handleAddComment} className="flex items-center gap-2 pt-2">
+            <form onSubmit={handleAddComment} className="space-y-2 pt-2">
               <input
                 type="text"
+                value={newCommentHandle}
+                onChange={(e) => setNewCommentHandle(e.target.value)}
+                placeholder={previewAnon.handle}
+                className="w-full px-3 py-2 text-xs bg-slate-950 text-slate-200 placeholder-slate-500 rounded-md border border-slate-800 focus:outline-none focus:border-cyan-500/60 font-sans"
+              />
+              <textarea
+                rows={3}
                 value={newCommentBody}
                 onChange={(e) => setNewCommentBody(e.target.value)}
                 placeholder="Write an anonymous reply..."
-                className="flex-1 px-3 py-2 text-xs bg-slate-950 text-slate-200 placeholder-slate-500 rounded-md border border-slate-800 focus:outline-none focus:border-cyan-500/60 font-sans"
+                className="w-full px-3 py-2 text-xs bg-slate-950 text-slate-200 placeholder-slate-500 rounded-md border border-slate-800 focus:outline-none focus:border-cyan-500/60 font-sans"
               />
-              <button
-                type="submit"
-                className="px-4 py-2 bg-cyan-500 hover:bg-cyan-400 text-slate-950 font-bold text-xs rounded-md flex items-center space-x-1 transition-colors cursor-pointer"
-              >
-                <Send className="w-3.5 h-3.5" />
-                <span>Reply</span>
-              </button>
+              <div className="flex justify-end">
+                <button
+                  type="submit"
+                  className="px-4 py-2 bg-cyan-500 hover:bg-cyan-400 text-slate-950 font-bold text-xs rounded-md flex items-center space-x-1 transition-colors cursor-pointer"
+                >
+                  <Send className="w-3.5 h-3.5" />
+                  <span>Reply</span>
+                </button>
+              </div>
             </form>
           </div>
         </div>

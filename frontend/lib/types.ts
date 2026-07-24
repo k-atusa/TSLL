@@ -7,6 +7,7 @@ export interface Comment {
 
 export interface Post {
   id: string;
+  handle?: string;
   title: string;
   body: string;
   files: string[];

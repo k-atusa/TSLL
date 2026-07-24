@@ -24,6 +24,7 @@ type Comment struct {
 
 type Post struct {
 	ID        string    `json:"id"`
+	Handle    string    `json:"handle,omitempty"`
 	Title     string    `json:"title"`
 	Body      string    `json:"body"`
 	Files     []string  `json:"files"`
@@ -31,6 +32,22 @@ type Post struct {
 	Likes     int       `json:"likes"`
 	Dislikes  int       `json:"dislikes"`
 	Comments  []Comment `json:"comments"`
+}
+
+func normalizeHandle(handle string) string {
+	handle = strings.TrimSpace(handle)
+	if handle == "" {
+		return ""
+	}
+	return strings.Replace(handle, "Anon#", "익명#", 1)
+}
+
+func generateAnonHandle(seed int64) string {
+	randHex := fmt.Sprintf("%x", seed)
+	if len(randHex) > 4 {
+		randHex = randHex[len(randHex)-4:]
+	}
+	return fmt.Sprintf("익명#%s", randHex)
 }
 
 type StorageStats struct {
@@ -180,6 +197,7 @@ func handleCreatePost(w http.ResponseWriter, r *http.Request) {
 	// validate title
 	title := r.FormValue("title")
 	body := r.FormValue("body")
+	handle := normalizeHandle(r.FormValue("handle"))
 	if title == "" {
 		http.Error(w, "Title is required", http.StatusBadRequest)
 		return
@@ -189,6 +207,7 @@ func handleCreatePost(w http.ResponseWriter, r *http.Request) {
 	id := fmt.Sprintf("%d", time.Now().UnixNano())
 	post := Post{
 		ID:        id,
+		Handle:    handle,
 		Title:     title,
 		Body:      body,
 		CreatedAt: time.Now().UnixNano(),
@@ -317,7 +336,8 @@ func handleCreateComment(w http.ResponseWriter, r *http.Request) {
 	}
 
 	var req struct {
-		Body string `json:"body"`
+		Body   string `json:"body"`
+		Handle string `json:"handle"`
 	}
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil || strings.TrimSpace(req.Body) == "" {
 		http.Error(w, "Comment body is required", http.StatusBadRequest)
@@ -325,13 +345,13 @@ func handleCreateComment(w http.ResponseWriter, r *http.Request) {
 	}
 
 	commentID := fmt.Sprintf("%d", time.Now().UnixNano())
-	randHex := fmt.Sprintf("%x", time.Now().UnixNano())
-	if len(randHex) > 4 {
-		randHex = randHex[len(randHex)-4:]
+	handle := normalizeHandle(req.Handle)
+	if handle == "" {
+		handle = generateAnonHandle(time.Now().UnixNano())
 	}
 	comment := Comment{
 		ID:        commentID,
-		Handle:    fmt.Sprintf("Anon#%s", randHex),
+		Handle:    handle,
 		Body:      strings.TrimSpace(req.Body),
 		CreatedAt: time.Now().UnixNano(),
 	}

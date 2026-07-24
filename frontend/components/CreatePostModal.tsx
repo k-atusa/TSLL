@@ -13,7 +13,7 @@ import {
   CheckCircle2,
   AlertCircle,
 } from "lucide-react";
-import { createPost, generateAnonId } from "@/lib/api";
+import { createPost, generateRandomAnonId } from "@/lib/api";
 import { BoardCategory, Post } from "@/lib/types";
 
 interface CreatePostModalProps {
@@ -38,6 +38,7 @@ export const CreatePostModal: React.FC<CreatePostModalProps> = ({
   defaultCategory = "general",
 }) => {
   const [selectedCategory, setSelectedCategory] = useState<BoardCategory>(defaultCategory);
+  const [nickname, setNickname] = useState("");
   const [title, setTitle] = useState("");
   const [body, setBody] = useState("");
   const [files, setFiles] = useState<File[]>([]);
@@ -48,7 +49,7 @@ export const CreatePostModal: React.FC<CreatePostModalProps> = ({
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   // Generate transient anon ID for modal preview
-  const previewAnon = React.useMemo(() => generateAnonId("anon-transient-preview"), []);
+  const previewAnon = React.useMemo(() => generateRandomAnonId(), []);
 
   if (!isOpen) return null;
 
@@ -75,11 +76,13 @@ export const CreatePostModal: React.FC<CreatePostModalProps> = ({
     const categoryObj = CATEGORIES.find((c) => c.id === selectedCategory);
     const categoryPrefix = categoryObj ? `${categoryObj.prefix} ` : "";
     const finalTitle = title.startsWith("[") ? title : `${categoryPrefix}${title}`;
+    const finalHandle = nickname.trim();
 
     try {
-      const newPost = await createPost(finalTitle, body, files);
+      const newPost = await createPost(finalTitle, body, files, finalHandle || undefined);
       onPostCreated(newPost);
       // Reset form
+      setNickname("");
       setTitle("");
       setBody("");
       setFiles([]);
@@ -107,7 +110,7 @@ export const CreatePostModal: React.FC<CreatePostModalProps> = ({
             <div>
               <h3 className="text-sm font-bold text-white font-mono">NEW ANONYMOUS POST</h3>
               <p className="text-[11px] text-slate-400">
-                Posting as <span className="font-mono text-cyan-400 font-semibold">{previewAnon.handle}</span> (No Trace)
+                  Posting as <span className="font-mono text-cyan-400 font-semibold">{previewAnon.handle}</span> (No Trace)
               </p>
             </div>
           </div>
@@ -128,6 +131,23 @@ export const CreatePostModal: React.FC<CreatePostModalProps> = ({
               <span>{errorMsg}</span>
             </div>
           )}
+
+          {/* Nickname */}
+          <div>
+            <label className="block text-xs font-mono font-medium text-slate-400 mb-1.5">
+              NICKNAME (OPTIONAL)
+            </label>
+            <input
+              type="text"
+              value={nickname}
+              onChange={(e) => setNickname(e.target.value)}
+              placeholder={previewAnon.handle}
+              className="w-full px-3.5 py-2.5 text-sm bg-slate-950 text-slate-100 placeholder-slate-500 rounded-md border border-slate-800 focus:outline-none focus:border-cyan-500/60 focus:ring-1 focus:ring-cyan-500/60"
+            />
+            <p className="mt-1 text-[11px] text-slate-500 font-mono">
+              비워두면 자동으로 익명 닉네임이 적용됩니다.
+            </p>
+          </div>
 
           {/* Category Selector */}
           <div>

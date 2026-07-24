@@ -25,10 +25,13 @@ import {
   formatTimeAgo,
   formatFullDate,
   generateAnonId,
+  generateRandomAnonId,
+  getHandleBadgeText,
   getFileUrl,
   isImageFile,
   isVideoFile,
   getCleanFileName,
+  normalizeAnonHandle,
   likePost,
   dislikePost,
   addComment,
@@ -59,8 +62,11 @@ export default function PostDetailPage({ params }: PageProps) {
 
   // Real comments state
   const [comments, setComments] = useState<Comment[]>([]);
+  const [newCommentHandle, setNewCommentHandle] = useState("");
   const [newCommentBody, setNewCommentBody] = useState("");
   const [isSubmittingComment, setIsSubmittingComment] = useState(false);
+
+  const previewAnon = React.useMemo(() => generateRandomAnonId(), []);
 
   useEffect(() => {
     async function loadData() {
@@ -116,13 +122,14 @@ export default function PostDetailPage({ params }: PageProps) {
     if (!newCommentBody.trim() || !post || isSubmittingComment) return;
 
     setIsSubmittingComment(true);
+    const submittedHandle = newCommentHandle.trim();
     try {
-      const updatedPost = await addComment(post.id, newCommentBody.trim());
+      const updatedPost = await addComment(post.id, newCommentBody.trim(), submittedHandle || undefined);
       if (updatedPost && updatedPost.comments) {
         setComments(updatedPost.comments);
       } else {
         // Fallback local append
-        const anon = generateAnonId(Date.now().toString());
+        const anon = submittedHandle ? { handle: submittedHandle, color: generateAnonId(submittedHandle).color } : generateRandomAnonId();
         setComments((prev) => [
           ...prev,
           {
@@ -133,6 +140,7 @@ export default function PostDetailPage({ params }: PageProps) {
           },
         ]);
       }
+      setNewCommentHandle("");
       setNewCommentBody("");
     } catch (err) {
       console.error("Failed to post comment", err);
@@ -168,7 +176,8 @@ export default function PostDetailPage({ params }: PageProps) {
 
   if (!post) return null;
 
-  const anonInfo = post ? generateAnonId(post.id) : { handle: "익명", color: "from-cyan-500 to-blue-600 font-bold" };
+  const postHandle = post.handle ? normalizeAnonHandle(post.handle) || post.handle : generateAnonId(post.id).handle;
+  const anonInfo = post.handle ? generateAnonId(post.handle) : generateAnonId(post.id);
   const formattedTime = post ? formatTimeAgo(post.createdAt) : "";
   const fullDateStr = post ? formatFullDate(post.createdAt) : "";
 
@@ -249,12 +258,12 @@ export default function PostDetailPage({ params }: PageProps) {
               <div
                 className={`w-11 h-11 rounded-md bg-gradient-to-br ${anonInfo.color} flex items-center justify-center text-white text-sm font-mono font-bold shadow-md`}
               >
-                {anonInfo.handle.slice(3, 5).toUpperCase()}
+                {getHandleBadgeText(postHandle)}
               </div>
 
               <div>
                 <span className="font-mono text-base font-bold text-white block">
-                  {anonInfo.handle}
+                  {postHandle}
                 </span>
                 <div className="flex items-center space-x-2 text-xs font-mono text-slate-400 mt-0.5">
                   <Clock className="w-3.5 h-3.5 text-slate-500" />
@@ -409,7 +418,9 @@ export default function PostDetailPage({ params }: PageProps) {
                   <div className="flex items-center justify-between text-xs">
                     <div className="flex items-center space-x-2">
                       <span className="w-2 h-2 rounded-full bg-cyan-400"></span>
-                      <span className="font-mono font-bold text-cyan-400 text-sm">{c.handle}</span>
+                      <span className="font-mono font-bold text-cyan-400 text-sm">
+                        {normalizeAnonHandle(c.handle) || c.handle}
+                      </span>
                     </div>
                     <span className="font-mono text-slate-500 text-xs">
                       {formatTimeAgo(c.createdAt)}
@@ -429,6 +440,13 @@ export default function PostDetailPage({ params }: PageProps) {
             <label className="block text-xs font-mono font-medium text-slate-400">
               댓글 작성하기
             </label>
+            <input
+              type="text"
+              value={newCommentHandle}
+              onChange={(e) => setNewCommentHandle(e.target.value)}
+              placeholder={previewAnon.handle}
+              className="w-full px-4 py-3 text-sm md:text-base bg-slate-950 text-slate-100 placeholder-slate-500 rounded-md border border-slate-800 focus:outline-none focus:border-cyan-500/60 focus:ring-1 focus:ring-cyan-500/60 font-sans"
+            />
             <textarea
               rows={3}
               value={newCommentBody}

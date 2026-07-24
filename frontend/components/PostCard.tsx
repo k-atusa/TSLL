@@ -19,12 +19,14 @@ import { Post } from "@/lib/types";
 import {
   formatTimeAgo,
   generateAnonId,
+  getHandleBadgeText,
   getFileUrl,
   isImageFile,
   isVideoFile,
   getCleanFileName,
   likePost,
   dislikePost,
+  normalizeAnonHandle,
 } from "@/lib/api";
 
 interface PostCardProps {
@@ -39,7 +41,8 @@ export const PostCard: React.FC<PostCardProps> = ({ post }) => {
   const [hasDownvoted, setHasDownvoted] = useState(false);
   const [copied, setCopied] = useState(false);
 
-  const anonInfo = generateAnonId(post.id);
+  const displayHandle = post.handle ? normalizeAnonHandle(post.handle) || post.handle : generateAnonId(post.id).handle;
+  const anonInfo = post.handle ? generateAnonId(post.handle) : generateAnonId(post.id);
   const formattedTime = formatTimeAgo(post.createdAt);
 
   const imageFiles = post.files?.filter((f) => isImageFile(f)) || [];
@@ -103,13 +106,13 @@ export const PostCard: React.FC<PostCardProps> = ({ post }) => {
           <div
             className={`w-7 h-7 rounded-sm bg-gradient-to-br ${anonInfo.color} flex items-center justify-center text-white text-[10px] font-mono font-bold shadow-sm`}
           >
-            {anonInfo.handle.slice(3, 5).toUpperCase()}
+            {getHandleBadgeText(displayHandle)}
           </div>
 
           <div>
             <div className="flex items-center space-x-2">
               <span className="font-mono text-xs font-semibold text-slate-200 group-hover:text-cyan-300 transition-colors">
-                {anonInfo.handle}
+                {displayHandle}
               </span>
               {categoryTag && (
                 <span className="px-1.5 py-0.5 text-[10px] font-mono font-medium rounded-sm bg-cyan-500/10 text-cyan-400 border border-cyan-500/30">

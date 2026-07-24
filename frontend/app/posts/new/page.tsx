@@ -22,7 +22,7 @@ import {
   Sparkles,
 } from "lucide-react";
 import { Header } from "@/components/Header";
-import { createPost } from "@/lib/api";
+import { createPost, generateRandomAnonId } from "@/lib/api";
 import { BoardCategory } from "@/lib/types";
 import { GALLERIES } from "@/lib/constants";
 
@@ -31,6 +31,9 @@ export default function CreatePostPage() {
 
   const CATEGORIES = GALLERIES.filter((g) => g.id !== "all" && g.id !== "hot");
 
+  const previewAnon = React.useMemo(() => generateRandomAnonId(), []);
+
+  const [nickname, setNickname] = useState("");
   const [title, setTitle] = useState("");
   const [body, setBody] = useState("");
   const [selectedCategory, setSelectedCategory] = useState<BoardCategory>("general");
@@ -85,9 +88,10 @@ export default function CreatePostPage() {
 
     const prefix = `[${selectedCategory}]`;
     const fullTitle = title.startsWith("[") ? title : `${prefix} ${title.trim()}`;
+    const finalHandle = nickname.trim();
 
     try {
-      const created = await createPost(fullTitle, body, files);
+      const created = await createPost(fullTitle, body, files, finalHandle || undefined);
       router.push(`/posts/${created.id}`);
     } catch (err) {
       console.error("Failed to create post", err);
@@ -194,6 +198,22 @@ export default function CreatePostPage() {
         {/* Create Post Form */}
         <form onSubmit={handleSubmit} className="bg-slate-900/80 border border-slate-800 rounded-md p-6 md:p-8 shadow-xl space-y-6 font-sans">
           <h1 className="text-2xl font-bold text-white">새 글 작성</h1>
+
+          <div className="space-y-2">
+            <label className="block text-xs font-medium text-slate-400 uppercase tracking-wider">
+              닉네임 (선택)
+            </label>
+            <input
+              type="text"
+              value={nickname}
+              onChange={(e) => setNickname(e.target.value)}
+              placeholder={previewAnon.handle}
+              className="w-full px-4 py-3 text-base bg-slate-950 text-slate-100 placeholder-slate-500 rounded-md border border-slate-800 focus:outline-none focus:border-cyan-500/60 focus:ring-1 focus:ring-cyan-500/60 font-sans"
+            />
+            <p className="text-[11px] text-slate-500 font-mono">
+              비워두면 자동으로 익명 닉네임이 적용됩니다.
+            </p>
+          </div>
 
           {/* Category Selection */}
           <div className="space-y-2">
