@@ -23,6 +23,7 @@ import { CreatePostModal } from "@/components/CreatePostModal";
 import {
   fetchPostDetail,
   formatTimeAgo,
+  formatFullDate,
   generateAnonId,
   getFileUrl,
   isImageFile,
@@ -33,7 +34,7 @@ import {
   addComment,
 } from "@/lib/api";
 import { BoardCategory, Comment, Post } from "@/lib/types";
-import { useLanguage } from "@/lib/LanguageContext";
+import { getGalleryName } from "@/lib/constants";
 
 interface PageProps {
   params: Promise<{ id: string }>;
@@ -43,7 +44,6 @@ export default function PostDetailPage({ params }: PageProps) {
   const resolvedParams = use(params);
   const postId = resolvedParams.id;
   const router = useRouter();
-  const { t } = useLanguage();
 
   const [post, setPost] = useState<Post | null>(null);
   const [loading, setLoading] = useState(true);
@@ -168,49 +168,44 @@ export default function PostDetailPage({ params }: PageProps) {
 
   if (!post) return null;
 
-  const anonInfo = generateAnonId(post.id);
-  const formattedTime = formatTimeAgo(post.createdAt);
-  const dateObj = new Date(Math.floor(post.createdAt / 1_000_000));
-  const fullDateStr = dateObj.toLocaleString("ko-KR", {
-    year: "numeric",
-    month: "long",
-    day: "numeric",
-    hour: "2-digit",
-    minute: "2-digit",
-  });
+  const anonInfo = post ? generateAnonId(post.id) : { handle: "익명", color: "from-cyan-500 to-blue-600 font-bold" };
+  const formattedTime = post ? formatTimeAgo(post.createdAt) : "";
+  const fullDateStr = post ? formatFullDate(post.createdAt) : "";
 
-  const tagMatch = post.title.match(/^\[(.*?)\]/);
+  // Extract tag from title if present
+  const tagMatch = post?.title.match(/^\[(.*?)\]/);
   const categoryTag = tagMatch ? tagMatch[1] : null;
-  const cleanTitle = tagMatch ? post.title.replace(/^\[.*?\]\s*/, "") : post.title;
+  const cleanTitle = tagMatch ? post.title.replace(/^\[.*?\]\s*/, "") : post?.title || "";
 
   return (
     <div className="min-h-screen bg-slate-950 text-slate-100 flex flex-col font-sans selection:bg-cyan-500 selection:text-slate-950">
-      {/* Lightbox backdrop for expanded image */}
+      {/* Expanded Image Viewer Modal */}
       {selectedImage && (
         <div
+          className="fixed inset-0 z-50 bg-slate-950/95 backdrop-blur-md flex items-center justify-center p-4"
           onClick={() => setSelectedImage(null)}
-          className="fixed inset-0 z-60 bg-slate-950/95 flex flex-col items-center justify-center p-4 backdrop-blur-md"
         >
           <button
             onClick={() => setSelectedImage(null)}
-            className="absolute top-4 right-4 text-slate-400 hover:text-white p-2 rounded-md bg-slate-900 border border-slate-800 cursor-pointer"
+            className="absolute top-4 right-4 p-2 text-slate-400 hover:text-white rounded-full bg-slate-900 border border-slate-800 cursor-pointer"
           >
             <X className="w-6 h-6" />
           </button>
+
           <img
             src={selectedImage}
-            alt="Full size media"
-            className="max-w-full max-h-[85vh] object-contain rounded-md border border-slate-800 shadow-2xl"
+            alt="Full size view"
+            className="max-w-full max-h-[90vh] object-contain rounded-md shadow-2xl border border-slate-800"
           />
+
           <a
             href={selectedImage}
             download
-            target="_blank"
-            rel="noreferrer"
-            className="mt-4 px-5 py-2.5 bg-cyan-500 hover:bg-cyan-400 text-slate-950 font-bold rounded-md text-sm flex items-center space-x-2 shadow-lg cursor-pointer"
+            onClick={(e) => e.stopPropagation()}
+            className="absolute bottom-6 left-1/2 -translate-x-1/2 flex items-center space-x-2 px-5 py-2.5 rounded-md bg-cyan-500 hover:bg-cyan-400 text-slate-950 font-bold text-sm transition-all shadow-lg cursor-pointer"
           >
             <Download className="w-4 h-4" />
-            <span>Download Image</span>
+            <span>다운로드</span>
           </a>
         </div>
       )}
@@ -227,12 +222,12 @@ export default function PostDetailPage({ params }: PageProps) {
       />
 
       {/* Main Content Area */}
-      <main className="flex-1 max-w-4xl w-full mx-auto px-4 py-8 space-y-8">
+      <main className="flex-1 max-w-[1000px] w-full mx-auto px-4 py-8 space-y-8">
         {/* Navigation Top Bar */}
-        <div className="flex items-center justify-between">
+        <div className="flex items-center justify-between font-sans">
           <Link
             href="/"
-            className="inline-flex items-center space-x-2 text-sm font-mono font-medium text-slate-400 hover:text-cyan-400 transition-colors bg-slate-900/60 border border-slate-800 px-3.5 py-2 rounded-md"
+            className="inline-flex items-center space-x-2 text-sm font-medium text-slate-400 hover:text-cyan-400 transition-colors bg-slate-900/60 border border-slate-800 px-3.5 py-2 rounded-md"
           >
             <ArrowLeft className="w-4 h-4" />
             <span>목록으로</span>
@@ -252,9 +247,9 @@ export default function PostDetailPage({ params }: PageProps) {
             <div className="flex items-center space-x-3.5">
               {/* Tripcode Badge */}
               <div
-                className={`w-11 h-11 rounded-md bg-gradient-to-br ${anonInfo.color} flex items-center justify-center text-white text-base font-mono font-bold shadow-md`}
+                className={`w-11 h-11 rounded-md bg-gradient-to-br ${anonInfo.color} flex items-center justify-center text-white text-sm font-mono font-bold shadow-md`}
               >
-                {anonInfo.handle.slice(5, 7).toUpperCase()}
+                {anonInfo.handle.slice(3, 5).toUpperCase()}
               </div>
 
               <div>
@@ -263,9 +258,9 @@ export default function PostDetailPage({ params }: PageProps) {
                 </span>
                 <div className="flex items-center space-x-2 text-xs font-mono text-slate-400 mt-0.5">
                   <Clock className="w-3.5 h-3.5 text-slate-500" />
-                  <span>{formattedTime}</span>
-                  <span>•</span>
                   <span>{fullDateStr}</span>
+                  <span className="text-slate-600">•</span>
+                  <span className="text-slate-500">{formattedTime}</span>
                 </div>
               </div>
             </div>
@@ -273,24 +268,24 @@ export default function PostDetailPage({ params }: PageProps) {
             {/* Share / Copy Button */}
             <button
               onClick={handleCopyLink}
-              className="flex items-center space-x-2 px-3.5 py-2 rounded-md bg-slate-950 border border-slate-800 hover:border-cyan-500/40 text-slate-300 hover:text-white transition-all text-xs font-mono cursor-pointer"
+              className="flex items-center space-x-2 px-3.5 py-2 rounded-md bg-slate-950 border border-slate-800 hover:border-cyan-500/40 text-slate-300 hover:text-white transition-all text-xs font-sans cursor-pointer"
             >
               {copied ? (
                 <>
                   <Check className="w-4 h-4 text-emerald-400" />
-                  <span className="text-emerald-400 font-bold">Link Copied!</span>
+                  <span className="text-emerald-400 font-bold">링크 복사 완료!</span>
                 </>
               ) : (
                 <>
                   <Share2 className="w-4 h-4 text-cyan-400" />
-                  <span>Share Post</span>
+                  <span>게시글 공유</span>
                 </>
               )}
             </button>
           </div>
 
           {/* Post Title */}
-          <h1 className="text-2xl md:text-3xl font-bold text-white leading-tight tracking-tight">
+          <h1 className="text-2xl md:text-3xl font-bold text-white leading-tight tracking-tight font-sans">
             {cleanTitle}
           </h1>
 
@@ -304,9 +299,9 @@ export default function PostDetailPage({ params }: PageProps) {
           {/* Attachments & Gallery Section */}
           {post.files && post.files.length > 0 && (
             <div className="space-y-4 pt-4 border-t border-slate-800/80">
-              <h3 className="text-sm font-mono font-bold text-slate-300 uppercase tracking-wider flex items-center space-x-2">
+              <h3 className="text-sm font-bold text-slate-300 uppercase tracking-wider flex items-center space-x-2 font-sans">
                 <Paperclip className="w-4.5 h-4.5 text-cyan-400" />
-                <span>ATTACHMENTS ({post.files.length})</span>
+                <span>첨부파일 ({post.files.length})</span>
               </h3>
 
               {/* Media Grid */}

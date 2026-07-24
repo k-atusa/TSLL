@@ -99,16 +99,16 @@ export default function Home() {
       />
 
       {/* Main Layout Container: Left Sidebar + Right Feed */}
-      <main className="flex-1 max-w-6xl w-full mx-auto px-4 py-6 flex flex-col md:flex-row gap-6">
+      <main className="flex-1 max-w-[1400px] w-full mx-auto px-4 sm:px-6 py-6 flex flex-col md:flex-row gap-6">
         {/* Left Sidebar: DCInside Style Gallery List */}
-        <aside className="w-full md:w-60 flex-shrink-0 space-y-4 font-sans">
-          <div className="bg-slate-900/80 border border-slate-800 rounded-md p-3.5 shadow-md space-y-3">
-            <div className="flex items-center justify-between border-b border-slate-800 pb-2">
-              <h3 className="text-xs font-bold text-slate-300 font-mono flex items-center space-x-1.5 uppercase tracking-wider">
+        <aside className="w-full md:w-64 flex-shrink-0 space-y-4 font-sans">
+          <div className="bg-slate-900/80 border border-slate-800 rounded-md p-4 shadow-md space-y-3">
+            <div className="flex items-center justify-between border-b border-slate-800 pb-2.5">
+              <h3 className="text-xs font-bold text-slate-300 flex items-center space-x-1.5 uppercase tracking-wider">
                 <Layers className="w-4 h-4 text-cyan-400" />
                 <span>갤러리 목록</span>
               </h3>
-              <span className="text-[10px] font-mono text-slate-500">DC Style</span>
+              <span className="text-[10px] font-mono text-slate-500">FCINSIDE</span>
             </div>
 
             {/* Gallery Item Buttons */}
@@ -119,7 +119,7 @@ export default function Home() {
                   <button
                     key={g.id}
                     onClick={() => setActiveCategory(g.id)}
-                    className={`w-full text-left px-3 py-2 rounded text-xs font-medium flex items-center justify-between transition-all cursor-pointer ${
+                    className={`w-full text-left px-3 py-2.5 rounded text-xs font-medium flex items-center justify-between transition-all cursor-pointer ${
                       isSelected
                         ? "bg-cyan-500/20 text-cyan-300 border border-cyan-500/40 font-bold shadow-sm"
                         : "text-slate-400 hover:text-slate-200 hover:bg-slate-800/60 border border-transparent"
@@ -222,7 +222,7 @@ export default function Home() {
                 className="mt-2 px-4 py-2 text-xs font-bold rounded-md bg-cyan-500 hover:bg-cyan-400 text-slate-950 transition-all shadow-md inline-flex items-center space-x-1.5 cursor-pointer"
               >
                 <Plus className="w-4 h-4" />
-                <span>+ 첫 글 작성하기</span>
+                <span>첫 글 작성하기</span>
               </Link>
             </div>
           ) : (
@@ -237,7 +237,7 @@ export default function Home() {
 
       {/* Footer */}
       <footer className="mt-12 border-t border-slate-900 bg-slate-950 py-6 text-xs text-slate-400 font-mono">
-        <div className="max-w-6xl mx-auto px-4 flex flex-wrap items-center justify-between gap-4">
+        <div className="max-w-[1400px] mx-auto px-4 sm:px-6 flex flex-wrap items-center justify-between gap-4">
           <div className="flex items-center space-x-2 text-slate-400">
             <Shield className="w-4 h-4 text-cyan-400" />
             <span>FCINSIDE 익명 시스템 • 로그 없음</span>

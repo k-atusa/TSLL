@@ -101,9 +101,9 @@ export const PostCard: React.FC<PostCardProps> = ({ post }) => {
         <div className="flex items-center space-x-2.5">
           {/* Tripcode Badge */}
           <div
-            className={`w-7 h-7 rounded-sm bg-gradient-to-br ${anonInfo.color} flex items-center justify-center text-white text-[11px] font-mono font-bold shadow-sm`}
+            className={`w-7 h-7 rounded-sm bg-gradient-to-br ${anonInfo.color} flex items-center justify-center text-white text-[10px] font-mono font-bold shadow-sm`}
           >
-            {anonInfo.handle.slice(5, 7).toUpperCase()}
+            {anonInfo.handle.slice(3, 5).toUpperCase()}
           </div>
 
           <div>

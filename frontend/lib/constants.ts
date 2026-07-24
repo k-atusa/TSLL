@@ -9,7 +9,7 @@ export interface GalleryInfo {
 }
 
 export const GALLERIES: GalleryInfo[] = [
-  { id: "all", name: "전체 갤러리", shortName: "전체", icon: "🌐", desc: "전체 게시글" },
+  { id: "all", name: "전체 글", shortName: "전체", icon: "🌐", desc: "전체 게시글" },
   { id: "hot", name: "실시간 베스트 갤러리", shortName: "실베", icon: "🔥", desc: "개추 10개 이상 인기글" },
   { id: "general", name: "국내야구 갤러리", shortName: "야갤", icon: "⚾", desc: "자유 수다 게시판" },
   { id: "crypto", name: "VPN Gate 갤러리", shortName: "VPN", icon: "🔒", desc: "보안 및 개인정보" },
@@ -20,5 +20,5 @@ export const GALLERIES: GalleryInfo[] = [
 
 export function getGalleryName(id: BoardCategory): string {
   const g = GALLERIES.find((item) => item.id === id);
-  return g ? g.name : "전체 갤러리";
+  return g ? g.name : "전체 글";
 }

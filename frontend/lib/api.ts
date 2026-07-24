@@ -2,33 +2,41 @@ import { Post, StorageStats } from "./types";
 
 const API_BASE = "";
 
-// Helper: Format nanosecond timestamp to relative time string
+// Helper: Format nanosecond timestamp to YYYY.MM.DD. HH:mm:ss (24h + seconds)
+export function formatFullDate(nanoTimestamp: number): string {
+  if (!nanoTimestamp) return "";
+  const date = new Date(Math.floor(nanoTimestamp / 1_000_000));
+  const YYYY = date.getFullYear();
+  const MM = String(date.getMonth() + 1).padStart(2, "0");
+  const DD = String(date.getDate()).padStart(2, "0");
+  const HH = String(date.getHours()).padStart(2, "0");
+  const mm = String(date.getMinutes()).padStart(2, "0");
+  const ss = String(date.getSeconds()).padStart(2, "0");
+  return `${YYYY}.${MM}.${DD}. ${HH}:${mm}:${ss}`;
+}
+
+// Helper: Format nanosecond timestamp to relative Korean time string or full date
 export function formatTimeAgo(nanoTimestamp: number): string {
-  if (!nanoTimestamp) return "Just now";
+  if (!nanoTimestamp) return "방금 전";
   const ms = Math.floor(nanoTimestamp / 1_000_000);
   const now = Date.now();
   const diffSec = Math.floor((now - ms) / 1000);
 
-  if (diffSec < 60) return "Just now";
-  if (diffSec < 3600) return `${Math.floor(diffSec / 60)}m ago`;
-  if (diffSec < 86400) return `${Math.floor(diffSec / 3600)}h ago`;
-  if (diffSec < 604800) return `${Math.floor(diffSec / 86400)}d ago`;
+  if (diffSec < 60) return "방금 전";
+  if (diffSec < 3600) return `${Math.floor(diffSec / 60)}분 전`;
+  if (diffSec < 86400) return `${Math.floor(diffSec / 3600)}시간 전`;
+  if (diffSec < 604800) return `${Math.floor(diffSec / 86400)}일 전`;
 
-  return new Date(ms).toLocaleDateString("ko-KR", {
-    month: "short",
-    day: "numeric",
-    hour: "2-digit",
-    minute: "2-digit",
-  });
+  return formatFullDate(nanoTimestamp);
 }
 
-// Helper: Generate anonymous tripcode / handle from post ID or title
+// Helper: Generate anonymous tripcode handle (e.g. 익명#75fa) from post/comment ID
 export function generateAnonId(id: string): { handle: string; color: string } {
   let hash = 0;
   for (let i = 0; i < id.length; i++) {
     hash = id.charCodeAt(i) + ((hash << 5) - hash);
   }
-  const hex = Math.abs(hash).toString(16).padStart(6, "0").slice(0, 6);
+  const hex = Math.abs(hash).toString(16).padStart(4, "0").slice(0, 4);
   const colors = [
     "from-cyan-500 to-blue-600",
     "from-purple-500 to-indigo-600",
@@ -39,7 +47,7 @@ export function generateAnonId(id: string): { handle: string; color: string } {
   ];
   const colorIndex = Math.abs(hash) % colors.length;
   return {
-    handle: `Anon#${hex}`,
+    handle: `익명#${hex}`,
     color: colors[colorIndex],
   };
 }

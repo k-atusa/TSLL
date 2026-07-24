@@ -1,23 +1,10 @@
 import type { Metadata } from "next";
-import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
 
-import { LanguageProvider } from "@/lib/LanguageContext";
-
-const geistSans = Geist({
-  variable: "--font-geist-sans",
-  subsets: ["latin"],
-});
-
-const geistMono = Geist_Mono({
-  variable: "--font-geist-mono",
-  subsets: ["latin"],
-});
-
 export const metadata: Metadata = {
-  title: "FCINSIDE - Anonymous Community Bulletin Board",
+  title: "FCINSIDE - 익명 커뮤니티",
   description:
-    "Encrypted, anonymous community bulletin board. Post text, images, and files without registration.",
+    "회원가입 없는 익명 커뮤니티, 자유로운 게시글 작성 및 파일 공유.",
 };
 
 export default function RootLayout({
@@ -28,11 +15,11 @@ export default function RootLayout({
   return (
     <html
       lang="ko"
-      className={`${geistSans.variable} ${geistMono.variable} h-full antialiased dark`}
+      className="h-full antialiased dark"
       suppressHydrationWarning
     >
-      <body className="min-h-full flex flex-col bg-slate-950 text-slate-100" suppressHydrationWarning>
-        <LanguageProvider>{children}</LanguageProvider>
+      <body className="min-h-full flex flex-col bg-slate-950 text-slate-100 font-sans" suppressHydrationWarning>
+        {children}
       </body>
     </html>
   );

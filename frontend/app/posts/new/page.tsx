@@ -174,7 +174,7 @@ export default function CreatePostPage() {
         postCount={0}
       />
 
-      <main className="flex-1 max-w-4xl w-full mx-auto px-4 py-8 space-y-6">
+      <main className="flex-1 max-w-[1000px] w-full mx-auto px-4 py-8 space-y-6">
         {/* Navigation Bar */}
         <div className="flex items-center justify-between font-sans">
           <Link
@@ -342,7 +342,7 @@ export default function CreatePostPage() {
                   rows={10}
                   value={body}
                   onChange={(e) => setBody(e.target.value)}
-                  placeholder="Type post body content... Markdown syntax is automatically supported."
+                  placeholder="본문 내용을 입력하세요. 마크다운 문법이 자동으로 지원됩니다."
                   className="w-full px-4 py-3 text-base bg-slate-950 text-slate-100 placeholder-slate-500 rounded-b-md border border-t-0 border-slate-800 focus:outline-none focus:border-cyan-500/60 font-sans resize-y"
                 ></textarea>
               </div>
@@ -355,9 +355,9 @@ export default function CreatePostPage() {
           </div>
 
           {/* File Upload Section */}
-          <div className="space-y-3">
-            <label className="block text-xs font-mono font-medium text-slate-400 uppercase tracking-wider">
-              Attachments & Media Upload (Optional)
+          <div className="space-y-3 font-sans">
+            <label className="block text-xs font-medium text-slate-400 uppercase tracking-wider">
+              첨부파일 & 미디어 업로드 (선택사항)
             </label>
 
             <div
@@ -382,11 +382,11 @@ export default function CreatePostPage() {
               />
               <label htmlFor="file-input" className="cursor-pointer space-y-2 block">
                 <UploadCloud className="w-8 h-8 text-cyan-400 mx-auto" />
-                <p className="text-sm font-mono text-slate-300">
-                  Drag & drop files here, or <span className="text-cyan-400 font-bold underline">browse</span>
+                <p className="text-sm font-medium text-slate-300">
+                  파일을 여기에 끌어다 놓거나 <span className="text-cyan-400 font-bold underline">클릭하여 선택하세요</span>
                 </p>
-                <p className="text-xs text-slate-500 font-mono">
-                  Supports Images, Videos, Code files, Archives
+                <p className="text-xs text-slate-500 font-sans">
+                  이미지, 동영상, 소스코드, 압축파일 지원
                 </p>
               </label>
             </div>
@@ -394,7 +394,7 @@ export default function CreatePostPage() {
             {/* Attached Files List */}
             {files.length > 0 && (
               <div className="space-y-2 pt-2">
-                <p className="text-xs font-mono text-slate-400">Attached Files ({files.length}):</p>
+                <p className="text-xs font-sans text-slate-400">첨부된 파일 ({files.length}개):</p>
                 <div className="flex flex-wrap gap-2">
                   {files.map((file, idx) => (
                     <div
