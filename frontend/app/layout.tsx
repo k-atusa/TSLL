@@ -2,6 +2,8 @@ import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
 
+import { LanguageProvider } from "@/lib/LanguageContext";
+
 const geistSans = Geist({
   variable: "--font-geist-sans",
   subsets: ["latin"],
@@ -13,9 +15,9 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "FC Community // AnonBoard - Anonymous Bulletin & File Vault",
+  title: "FCINSIDE - Anonymous Community Bulletin Board",
   description:
-    "Encrypted, anonymous, ephemeral community bulletin board. Post text, images, and files without registration. Auto-capacity storage enforcement.",
+    "Encrypted, anonymous community bulletin board. Post text, images, and files without registration.",
 };
 
 export default function RootLayout({
@@ -25,12 +27,12 @@ export default function RootLayout({
 }>) {
   return (
     <html
-      lang="en"
+      lang="ko"
       className={`${geistSans.variable} ${geistMono.variable} h-full antialiased dark`}
       suppressHydrationWarning
     >
       <body className="min-h-full flex flex-col bg-slate-950 text-slate-100" suppressHydrationWarning>
-        {children}
+        <LanguageProvider>{children}</LanguageProvider>
       </body>
     </html>
   );

@@ -33,6 +33,7 @@ import {
   addComment,
 } from "@/lib/api";
 import { BoardCategory, Comment, Post } from "@/lib/types";
+import { useLanguage } from "@/lib/LanguageContext";
 
 interface PageProps {
   params: Promise<{ id: string }>;
@@ -42,6 +43,7 @@ export default function PostDetailPage({ params }: PageProps) {
   const resolvedParams = use(params);
   const postId = resolvedParams.id;
   const router = useRouter();
+  const { t } = useLanguage();
 
   const [post, setPost] = useState<Post | null>(null);
   const [loading, setLoading] = useState(true);
@@ -235,7 +237,7 @@ export default function PostDetailPage({ params }: PageProps) {
             className="inline-flex items-center space-x-2 text-sm font-mono font-medium text-slate-400 hover:text-cyan-400 transition-colors bg-slate-900/60 border border-slate-800 px-3.5 py-2 rounded-md"
           >
             <ArrowLeft className="w-4 h-4" />
-            <span>Back to Feed</span>
+            <span>{t("backToFeed")}</span>
           </Link>
 
           {categoryTag && (
@@ -378,7 +380,7 @@ export default function PostDetailPage({ params }: PageProps) {
               }`}
             >
               <ThumbsUp className={`w-4 h-4 ${hasLiked ? "text-cyan-400 fill-cyan-400/20" : "text-cyan-400"}`} />
-              <span>Like ({likesCount})</span>
+              <span>{t("like")} ({likesCount})</span>
             </button>
 
             <button
@@ -390,7 +392,7 @@ export default function PostDetailPage({ params }: PageProps) {
               }`}
             >
               <ThumbsDown className={`w-4 h-4 ${hasDisliked ? "text-rose-400 fill-rose-400/20" : "text-rose-400"}`} />
-              <span>Dislike ({dislikesCount})</span>
+              <span>{t("dislike")} ({dislikesCount})</span>
             </button>
           </div>
         </article>
@@ -400,14 +402,14 @@ export default function PostDetailPage({ params }: PageProps) {
           <div className="border-b border-slate-800/80 pb-4">
             <h3 className="text-base md:text-lg font-bold font-mono text-white flex items-center space-x-2">
               <MessageSquare className="w-5 h-5 text-cyan-400" />
-              <span>COMMENTS ({comments.length})</span>
+              <span>{t("comments").toUpperCase()} ({comments.length})</span>
             </h3>
           </div>
 
           {/* Comment List */}
           {comments.length === 0 ? (
             <div className="py-8 text-center text-slate-500 text-sm font-mono">
-              No comments yet. Write the first comment below!
+              {t("comments")} (0)
             </div>
           ) : (
             <div className="divide-y divide-slate-800/60">
@@ -434,13 +436,13 @@ export default function PostDetailPage({ params }: PageProps) {
           {/* Write Reply Form */}
           <form onSubmit={handleAddCommentSubmit} className="space-y-3 pt-4 border-t border-slate-800/80">
             <label className="block text-xs font-mono font-medium text-slate-400">
-              WRITE A COMMENT
+              {t("writeComment")}
             </label>
             <textarea
               rows={3}
               value={newCommentBody}
               onChange={(e) => setNewCommentBody(e.target.value)}
-              placeholder="Write your comment..."
+              placeholder={t("writeComment")}
               className="w-full px-4 py-3 text-sm md:text-base bg-slate-950 text-slate-100 placeholder-slate-500 rounded-md border border-slate-800 focus:outline-none focus:border-cyan-500/60 focus:ring-1 focus:ring-cyan-500/60 resize-y font-sans"
             ></textarea>
             <div className="flex justify-end">
@@ -450,7 +452,7 @@ export default function PostDetailPage({ params }: PageProps) {
                 className="px-5 py-2.5 bg-cyan-500 hover:bg-cyan-400 text-slate-950 font-bold text-xs md:text-sm rounded-md flex items-center space-x-2 transition-all shadow-md disabled:opacity-50 cursor-pointer"
               >
                 <Send className="w-4 h-4" />
-                <span>{isSubmittingComment ? "Posting..." : "Submit Comment"}</span>
+                <span>{isSubmittingComment ? t("posting") : t("submitComment")}</span>
               </button>
             </div>
           </form>

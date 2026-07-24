@@ -24,17 +24,19 @@ import {
 import { Header } from "@/components/Header";
 import { createPost } from "@/lib/api";
 import { BoardCategory } from "@/lib/types";
-
-const CATEGORIES: { id: BoardCategory; label: string; prefix: string }[] = [
-  { id: "general", label: "General", prefix: "[General]" },
-  { id: "crypto", label: "Crypto / ZK", prefix: "[Crypto]" },
-  { id: "tech", label: "Tech / Dev", prefix: "[Tech]" },
-  { id: "news", label: "News / Politics", prefix: "[News]" },
-  { id: "files", label: "File Vault", prefix: "[Files]" },
-];
+import { useLanguage } from "@/lib/LanguageContext";
 
 export default function CreatePostPage() {
   const router = useRouter();
+  const { t } = useLanguage();
+
+  const CATEGORIES: { id: BoardCategory; translationKey: string; prefix: string }[] = [
+    { id: "general", translationKey: "general", prefix: "[General]" },
+    { id: "crypto", translationKey: "crypto", prefix: "[Crypto]" },
+    { id: "tech", translationKey: "tech", prefix: "[Tech]" },
+    { id: "news", translationKey: "news", prefix: "[News]" },
+    { id: "files", translationKey: "files", prefix: "[Files]" },
+  ];
 
   const [title, setTitle] = useState("");
   const [body, setBody] = useState("");
@@ -189,23 +191,23 @@ export default function CreatePostPage() {
             className="inline-flex items-center space-x-2 text-sm font-mono font-medium text-slate-400 hover:text-cyan-400 transition-colors bg-slate-900/60 border border-slate-800 px-3.5 py-2 rounded-md"
           >
             <ArrowLeft className="w-4 h-4" />
-            <span>Back to Feed</span>
+            <span>{t("backToFeed")}</span>
           </Link>
 
           <div className="flex items-center space-x-2 text-xs font-mono text-cyan-400">
             <Sparkles className="w-4 h-4" />
-            <span>WYSIWYG MARKDOWN EDITOR</span>
+            <span>FCINSIDE MARKDOWN EDITOR</span>
           </div>
         </div>
 
         {/* Create Post Form */}
         <form onSubmit={handleSubmit} className="bg-slate-900/80 border border-slate-800 rounded-md p-6 md:p-8 shadow-xl space-y-6">
-          <h1 className="text-2xl font-bold font-mono text-white">Create New Post</h1>
+          <h1 className="text-2xl font-bold font-mono text-white">{t("createTitle")}</h1>
 
           {/* Category Selection */}
           <div className="space-y-2">
             <label className="block text-xs font-mono font-medium text-slate-400 uppercase tracking-wider">
-              Select Channel / Category
+              {t("selectCategory")}
             </label>
             <div className="flex flex-wrap gap-2">
               {CATEGORIES.map((cat) => (
@@ -219,7 +221,7 @@ export default function CreatePostPage() {
                       : "bg-slate-950 text-slate-400 border border-slate-800 hover:text-white"
                   }`}
                 >
-                  {cat.label}
+                  {t(cat.translationKey)}
                 </button>
               ))}
             </div>
@@ -228,14 +230,14 @@ export default function CreatePostPage() {
           {/* Title Field */}
           <div className="space-y-2">
             <label className="block text-xs font-mono font-medium text-slate-400 uppercase tracking-wider">
-              Post Title <span className="text-cyan-400">*</span>
+              {t("postTitle")} <span className="text-cyan-400">*</span>
             </label>
             <input
               type="text"
               required
               value={title}
               onChange={(e) => setTitle(e.target.value)}
-              placeholder="Write a clear, descriptive title..."
+              placeholder={t("postTitlePlaceholder")}
               className="w-full px-4 py-3 text-base bg-slate-950 text-slate-100 placeholder-slate-500 rounded-md border border-slate-800 focus:outline-none focus:border-cyan-500/60 focus:ring-1 focus:ring-cyan-500/60 font-sans"
             />
           </div>
@@ -244,7 +246,7 @@ export default function CreatePostPage() {
           <div className="space-y-2">
             <div className="flex items-center justify-between border-b border-slate-800 pb-2">
               <label className="text-xs font-mono font-medium text-slate-400 uppercase tracking-wider">
-                Post Content (Markdown Supported)
+                {t("postContent")}
               </label>
 
               {/* Edit / Preview Tabs */}
@@ -257,7 +259,7 @@ export default function CreatePostPage() {
                   }`}
                 >
                   <Edit3 className="w-3.5 h-3.5" />
-                  <span>Editor</span>
+                  <span>{t("editor")}</span>
                 </button>
 
                 <button
@@ -268,7 +270,7 @@ export default function CreatePostPage() {
                   }`}
                 >
                   <Eye className="w-3.5 h-3.5" />
-                  <span>Live Preview</span>
+                  <span>{t("preview")}</span>
                 </button>
               </div>
             </div>
@@ -435,7 +437,7 @@ export default function CreatePostPage() {
               className="px-6 py-3 bg-cyan-500 hover:bg-cyan-400 text-slate-950 font-bold text-sm rounded-md flex items-center space-x-2 transition-all shadow-lg shadow-cyan-500/20 disabled:opacity-50 cursor-pointer"
             >
               <Send className="w-4 h-4" />
-              <span>{submitting ? "Publishing Post..." : "Publish Post"}</span>
+              <span>{submitting ? t("publishing") : t("publish")}</span>
             </button>
           </div>
         </form>
