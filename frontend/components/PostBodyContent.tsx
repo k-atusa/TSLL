@@ -106,19 +106,19 @@ function renderInlineParts(
 }
 
 export const PostBodyContent: React.FC<PostBodyContentProps> = ({
-  body,
+  body = "",
   attachments = [],
   files = [],
   draftAttachments = [],
   className = "",
   onImageClick,
 }) => {
-  if (!body.trim()) return null;
+  if (!body || !body.trim()) return null;
 
   const attachmentsById = new Map<string, ResolvedAttachment>();
 
   // 1. Map draft attachments (local files for live preview)
-  draftAttachments.forEach((draft, idx) => {
+  (draftAttachments ?? []).forEach((draft, idx) => {
     let objectUrl = draft.url;
     if (!objectUrl && draft.file) {
       try {
@@ -136,7 +136,7 @@ export const PostBodyContent: React.FC<PostBodyContentProps> = ({
   });
 
   // 2. Map post.attachments (ID + filename pairs)
-  attachments.forEach((att, idx) => {
+  (attachments ?? []).forEach((att, idx) => {
     const entry: ResolvedAttachment = { filename: att.filename, url: getFileUrl(att.filename) };
     if (att.id) attachmentsById.set(att.id, entry);
     if (!attachmentsById.has(`file-${idx}`)) attachmentsById.set(`file-${idx}`, entry);
@@ -144,7 +144,7 @@ export const PostBodyContent: React.FC<PostBodyContentProps> = ({
   });
 
   // 3. Fallback map post.files (string filenames)
-  files.forEach((filename, idx) => {
+  (files ?? []).forEach((filename, idx) => {
     const entry: ResolvedAttachment = { filename, url: getFileUrl(filename) };
     if (!attachmentsById.has(`file-${idx}`)) attachmentsById.set(`file-${idx}`, entry);
     if (!attachmentsById.has(`${idx}`)) attachmentsById.set(`${idx}`, entry);
