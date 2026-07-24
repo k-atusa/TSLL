@@ -99,9 +99,6 @@ export default function Home() {
 
       {/* Main Board Layout Container */}
       <main className="flex-1 max-w-6xl w-full mx-auto px-4 py-6 space-y-6">
-        {/* Storage Capacity Gauge & Notice */}
-        <StorageBar posts={posts} stats={stats} />
-
         {/* Hero Banner / Board Status */}
         <div className="relative rounded-2xl bg-gradient-to-r from-slate-900 via-slate-900/90 to-cyan-950/40 border border-slate-800/80 p-5 md:p-6 overflow-hidden">
           <div className="absolute top-0 right-0 w-64 h-64 bg-cyan-500/5 rounded-full blur-3xl -z-10 pointer-events-none"></div>
@@ -187,18 +184,14 @@ export default function Home() {
       </main>
 
       {/* Footer */}
-      <footer className="mt-12 border-t border-slate-900 bg-slate-950 py-6 text-center text-xs text-slate-400 font-mono">
+      <footer className="mt-12 border-t border-slate-900 bg-slate-950 py-6 text-xs text-slate-400 font-mono">
         <div className="max-w-6xl mx-auto px-4 flex flex-wrap items-center justify-between gap-4">
           <div className="flex items-center space-x-2 text-slate-400">
             <Shield className="w-4 h-4 text-cyan-400" />
             <span>FALSECRYPT ANONYMOUS SYSTEM • ZERO LOGS</span>
           </div>
 
-          <div className="flex items-center space-x-4 text-slate-400">
-            <span>Server: Go stdlib</span>
-            <span>Frontend: Next.js + TS</span>
-            <span>Storage: FIFO Cap</span>
-          </div>
+          <StorageBar posts={posts} stats={stats} />
         </div>
       </footer>
 
