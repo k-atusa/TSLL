@@ -40,16 +40,23 @@ export const Header: React.FC<HeaderProps> = ({
       <div className="max-w-6xl mx-auto px-4 py-3 flex flex-wrap items-center justify-between gap-4">
         {/* Logo & Brand */}
         <div className="flex items-center space-x-3">
-          <div className="relative flex items-center justify-center w-10 h-10 rounded-xl bg-gradient-to-br from-cyan-500/20 to-purple-600/20 border border-cyan-500/40 text-cyan-400 shadow-[0_0_15px_rgba(6,182,212,0.15)]">
-            <Shield className="w-5 h-5 animate-pulse" />
-            <span className="absolute -top-1 -right-1 w-2.5 h-2.5 rounded-full bg-cyan-400 ring-4 ring-slate-950"></span>
+          <div className="relative flex items-center justify-center w-9 h-9 rounded-md bg-slate-900 border border-slate-800 overflow-hidden shadow-sm">
+            <img
+              src="/logo.png"
+              alt="FC Community Logo"
+              className="w-full h-full object-cover"
+              onError={(e) => {
+                (e.target as HTMLElement).style.display = "none";
+              }}
+            />
+            <span className="absolute -top-1 -right-1 w-2 h-2 rounded-full bg-cyan-400 ring-4 ring-slate-950"></span>
           </div>
           <div>
             <div className="flex items-center space-x-2">
               <h1 className="text-lg font-bold tracking-tight text-white font-mono">
-                FALSECRYPT <span className="text-cyan-400 font-extrabold">//</span> ANONBOARD
+                FC Community <span className="text-cyan-400 font-extrabold">//</span> ANONBOARD
               </h1>
-              <span className="px-1.5 py-0.5 text-[10px] font-mono font-medium rounded border border-cyan-500/30 bg-cyan-500/10 text-cyan-300">
+              <span className="px-1.5 py-0.5 text-[10px] font-mono font-medium rounded-sm border border-cyan-500/30 bg-cyan-500/10 text-cyan-300">
                 v2.0-LIVE
               </span>
             </div>
@@ -69,7 +76,7 @@ export const Header: React.FC<HeaderProps> = ({
               value={searchQuery}
               onChange={(e) => onSearchChange(e.target.value)}
               placeholder="Search posts or tripcodes..."
-              className="w-full pl-9 pr-3 py-1.5 text-xs bg-slate-900/90 text-slate-200 placeholder-slate-500 rounded-lg border border-slate-800 focus:outline-none focus:border-cyan-500/60 focus:ring-1 focus:ring-cyan-500/60 transition-all"
+              className="w-full pl-9 pr-3 py-1.5 text-xs bg-slate-900/90 text-slate-200 placeholder-slate-500 rounded-md border border-slate-800 focus:outline-none focus:border-cyan-500/60 focus:ring-1 focus:ring-cyan-500/60 transition-all"
             />
             {searchQuery && (
               <button
@@ -83,7 +90,7 @@ export const Header: React.FC<HeaderProps> = ({
 
           <button
             onClick={onOpenCreateModal}
-            className="flex items-center space-x-1.5 px-4 py-2 text-xs font-semibold rounded-lg bg-gradient-to-r from-cyan-500 to-blue-600 hover:from-cyan-400 hover:to-blue-500 text-white shadow-lg shadow-cyan-500/20 hover:shadow-cyan-500/35 transition-all duration-200 active:scale-95 whitespace-nowrap cursor-pointer"
+            className="flex items-center space-x-1.5 px-4 py-2 text-xs font-semibold rounded-md bg-gradient-to-r from-cyan-500 to-blue-600 hover:from-cyan-400 hover:to-blue-500 text-white shadow-md shadow-cyan-500/20 hover:shadow-cyan-500/35 transition-all duration-200 active:scale-95 whitespace-nowrap cursor-pointer"
           >
             <Plus className="w-4 h-4" />
             <span>New Post</span>
@@ -102,7 +109,7 @@ export const Header: React.FC<HeaderProps> = ({
                 <button
                   key={cat.id}
                   onClick={() => onSelectCategory(cat.id)}
-                  className={`flex items-center space-x-1.5 px-3 py-1.5 rounded-md text-xs font-medium transition-all duration-150 cursor-pointer whitespace-nowrap ${
+                  className={`flex items-center space-x-1.5 px-3 py-1.5 rounded-sm text-xs font-medium transition-all duration-150 cursor-pointer whitespace-nowrap ${
                     active
                       ? "bg-cyan-500/15 text-cyan-300 border border-cyan-500/30 shadow-[0_0_10px_rgba(6,182,212,0.1)]"
                       : "text-slate-400 hover:text-slate-200 hover:bg-slate-900 border border-transparent"
@@ -116,10 +123,10 @@ export const Header: React.FC<HeaderProps> = ({
           </nav>
 
           {/* Sorting Options */}
-          <div className="flex items-center space-x-1 bg-slate-900/80 p-0.5 rounded-lg border border-slate-800 text-[11px] font-mono">
+          <div className="flex items-center space-x-1 bg-slate-900/80 p-0.5 rounded-md border border-slate-800 text-[11px] font-mono">
             <button
               onClick={() => onSortChange("latest")}
-              className={`px-2.5 py-1 rounded transition-colors ${
+              className={`px-2.5 py-1 rounded-sm transition-colors ${
                 sortMode === "latest" ? "bg-cyan-500 text-slate-950 font-bold" : "text-slate-400 hover:text-white"
               }`}
             >
@@ -127,7 +134,7 @@ export const Header: React.FC<HeaderProps> = ({
             </button>
             <button
               onClick={() => onSortChange("popular")}
-              className={`px-2.5 py-1 rounded transition-colors ${
+              className={`px-2.5 py-1 rounded-sm transition-colors ${
                 sortMode === "popular" ? "bg-cyan-500 text-slate-950 font-bold" : "text-slate-400 hover:text-white"
               }`}
             >
@@ -135,7 +142,7 @@ export const Header: React.FC<HeaderProps> = ({
             </button>
             <button
               onClick={() => onSortChange("media")}
-              className={`px-2.5 py-1 rounded transition-colors ${
+              className={`px-2.5 py-1 rounded-sm transition-colors ${
                 sortMode === "media" ? "bg-cyan-500 text-slate-950 font-bold" : "text-slate-400 hover:text-white"
               }`}
             >

@@ -95,14 +95,14 @@ export const PostCard: React.FC<PostCardProps> = ({ post, onOpenDetail }) => {
   return (
     <article
       onClick={() => onOpenDetail(post)}
-      className="group relative bg-slate-900/70 border border-slate-800/90 hover:border-cyan-500/50 rounded-xl p-4 md:p-5 transition-all duration-200 hover:shadow-[0_0_25px_rgba(6,182,212,0.12)] cursor-pointer"
+      className="group relative bg-slate-900/70 border border-slate-800/90 hover:border-cyan-500/50 rounded-md p-4 md:p-5 transition-all duration-200 hover:shadow-[0_0_25px_rgba(6,182,212,0.12)] cursor-pointer"
     >
       {/* Header info */}
       <div className="flex items-center justify-between gap-3 mb-3">
         <div className="flex items-center space-x-2.5">
           {/* Tripcode Badge */}
           <div
-            className={`w-7 h-7 rounded-lg bg-gradient-to-br ${anonInfo.color} flex items-center justify-center text-white text-[11px] font-mono font-bold shadow-sm`}
+            className={`w-7 h-7 rounded-sm bg-gradient-to-br ${anonInfo.color} flex items-center justify-center text-white text-[11px] font-mono font-bold shadow-sm`}
           >
             {anonInfo.handle.slice(5, 7).toUpperCase()}
           </div>
@@ -113,7 +113,7 @@ export const PostCard: React.FC<PostCardProps> = ({ post, onOpenDetail }) => {
                 {anonInfo.handle}
               </span>
               {categoryTag && (
-                <span className="px-2 py-0.5 text-[10px] font-mono font-medium rounded-full bg-cyan-500/10 text-cyan-400 border border-cyan-500/30">
+                <span className="px-1.5 py-0.5 text-[10px] font-mono font-medium rounded-sm bg-cyan-500/10 text-cyan-400 border border-cyan-500/30">
                   #{categoryTag}
                 </span>
               )}
@@ -124,7 +124,7 @@ export const PostCard: React.FC<PostCardProps> = ({ post, onOpenDetail }) => {
 
         {/* Post ID & Options */}
         <div className="flex items-center space-x-2">
-          <span className="text-[10px] font-mono text-slate-400 bg-slate-950 px-2 py-1 rounded border border-slate-800">
+          <span className="text-[10px] font-mono text-slate-400 bg-slate-950 px-2 py-0.5 rounded-sm border border-slate-800">
             ID: {post.id.slice(-6)}
           </span>
         </div>
@@ -148,7 +148,7 @@ export const PostCard: React.FC<PostCardProps> = ({ post, onOpenDetail }) => {
           {imageFiles.slice(0, 3).map((img, idx) => (
             <div
               key={idx}
-              className="relative aspect-video rounded-lg overflow-hidden border border-slate-800 bg-slate-950 group-hover:border-slate-700 transition-colors"
+              className="relative aspect-video rounded-sm overflow-hidden border border-slate-800 bg-slate-950 group-hover:border-slate-700 transition-colors"
             >
               <img
                 src={getFileUrl(img)}
@@ -175,7 +175,7 @@ export const PostCard: React.FC<PostCardProps> = ({ post, onOpenDetail }) => {
           {otherFiles.map((file, idx) => (
             <div
               key={idx}
-              className="flex items-center space-x-1.5 px-2.5 py-1 text-[11px] font-mono rounded-md bg-slate-950 border border-slate-800 text-slate-300 hover:text-cyan-400 hover:border-cyan-500/40 transition-colors"
+              className="flex items-center space-x-1.5 px-2.5 py-1 text-[11px] font-mono rounded-sm bg-slate-950 border border-slate-800 text-slate-300 hover:text-cyan-400 hover:border-cyan-500/40 transition-colors"
             >
               <Paperclip className="w-3 h-3 text-cyan-400" />
               <span className="truncate max-w-[140px]">{getCleanFileName(file)}</span>
@@ -189,7 +189,7 @@ export const PostCard: React.FC<PostCardProps> = ({ post, onOpenDetail }) => {
         <div className="flex items-center space-x-1.5">
           <button
             onClick={handleUpvote}
-            className={`flex items-center space-x-1.5 px-2.5 py-1 rounded-lg border transition-all ${
+            className={`flex items-center space-x-1.5 px-2.5 py-1 rounded-sm border transition-all ${
               hasUpvoted
                 ? "bg-cyan-500/20 text-cyan-300 border-cyan-500/40 font-bold"
                 : "bg-slate-950/60 text-slate-400 border-slate-800 hover:text-slate-200 hover:border-slate-700"
@@ -201,7 +201,7 @@ export const PostCard: React.FC<PostCardProps> = ({ post, onOpenDetail }) => {
 
           <button
             onClick={handleFire}
-            className={`flex items-center space-x-1.5 px-2.5 py-1 rounded-lg border transition-all ${
+            className={`flex items-center space-x-1.5 px-2.5 py-1 rounded-sm border transition-all ${
               hasFired
                 ? "bg-amber-500/20 text-amber-300 border-amber-500/40 font-bold"
                 : "bg-slate-950/60 text-slate-400 border-slate-800 hover:text-slate-200 hover:border-slate-700"
@@ -213,7 +213,7 @@ export const PostCard: React.FC<PostCardProps> = ({ post, onOpenDetail }) => {
 
           <button
             onClick={handleShield}
-            className={`flex items-center space-x-1.5 px-2.5 py-1 rounded-lg border transition-all ${
+            className={`flex items-center space-x-1.5 px-2.5 py-1 rounded-sm border transition-all ${
               hasShielded
                 ? "bg-purple-500/20 text-purple-300 border-purple-500/40 font-bold"
                 : "bg-slate-950/60 text-slate-400 border-slate-800 hover:text-slate-200 hover:border-slate-700"
@@ -226,7 +226,7 @@ export const PostCard: React.FC<PostCardProps> = ({ post, onOpenDetail }) => {
 
         <div className="flex items-center space-x-2">
           {post.files && post.files.length > 0 && (
-            <span className="flex items-center space-x-1 text-[11px] font-mono text-cyan-400 bg-cyan-950/40 px-2 py-0.5 rounded border border-cyan-800/40">
+            <span className="flex items-center space-x-1 text-[11px] font-mono text-cyan-400 bg-cyan-950/40 px-2 py-0.5 rounded-sm border border-cyan-800/40">
               <Paperclip className="w-3 h-3" />
               <span>{post.files.length}</span>
             </span>
@@ -234,7 +234,7 @@ export const PostCard: React.FC<PostCardProps> = ({ post, onOpenDetail }) => {
 
           <button
             onClick={handleCopyLink}
-            className="p-1.5 rounded-lg bg-slate-950/60 border border-slate-800 hover:text-cyan-400 hover:border-cyan-500/40 transition-colors text-slate-400"
+            className="p-1.5 rounded-sm bg-slate-950/60 border border-slate-800 hover:text-cyan-400 hover:border-cyan-500/40 transition-colors text-slate-400"
             title="Copy share link"
           >
             {copied ? <Check className="w-3.5 h-3.5 text-emerald-400" /> : <Share2 className="w-3.5 h-3.5" />}

@@ -95,13 +95,13 @@ export const CreatePostModal: React.FC<CreatePostModalProps> = ({
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-md overflow-y-auto">
       <div
-        className="relative w-full max-w-2xl bg-slate-900 border border-slate-800 rounded-2xl shadow-2xl overflow-hidden my-8"
+        className="relative w-full max-w-2xl bg-slate-900 border border-slate-800 rounded-lg shadow-2xl overflow-hidden my-8"
         onClick={(e) => e.stopPropagation()}
       >
         {/* Header */}
         <div className="flex items-center justify-between px-6 py-4 border-b border-slate-800/80 bg-slate-950/50">
           <div className="flex items-center space-x-3">
-            <div className="w-8 h-8 rounded-lg bg-cyan-500/10 border border-cyan-500/30 flex items-center justify-center text-cyan-400">
+            <div className="w-8 h-8 rounded-md bg-cyan-500/10 border border-cyan-500/30 flex items-center justify-center text-cyan-400">
               <Shield className="w-4 h-4" />
             </div>
             <div>
@@ -114,7 +114,7 @@ export const CreatePostModal: React.FC<CreatePostModalProps> = ({
 
           <button
             onClick={onClose}
-            className="p-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-400 hover:text-white transition-colors"
+            className="p-1.5 rounded-md bg-slate-800 hover:bg-slate-700 text-slate-400 hover:text-white transition-colors"
           >
             <X className="w-5 h-5" />
           </button>
@@ -123,7 +123,7 @@ export const CreatePostModal: React.FC<CreatePostModalProps> = ({
         {/* Form Body */}
         <form onSubmit={handleSubmit} className="p-6 space-y-5">
           {errorMsg && (
-            <div className="p-3 rounded-lg bg-rose-500/10 border border-rose-500/30 text-rose-300 text-xs flex items-center space-x-2">
+            <div className="p-3 rounded-md bg-rose-500/10 border border-rose-500/30 text-rose-300 text-xs flex items-center space-x-2">
               <AlertCircle className="w-4 h-4 text-rose-400 flex-shrink-0" />
               <span>{errorMsg}</span>
             </div>
@@ -142,7 +142,7 @@ export const CreatePostModal: React.FC<CreatePostModalProps> = ({
                     key={cat.id}
                     type="button"
                     onClick={() => setSelectedCategory(cat.id)}
-                    className={`px-3 py-1.5 rounded-lg text-xs font-mono transition-all ${
+                    className={`px-3 py-1.5 rounded-md text-xs font-mono transition-all ${
                       active
                         ? "bg-cyan-500 text-slate-950 font-bold shadow-[0_0_12px_rgba(6,182,212,0.3)]"
                         : "bg-slate-950 text-slate-400 border border-slate-800 hover:text-slate-200"
@@ -166,7 +166,7 @@ export const CreatePostModal: React.FC<CreatePostModalProps> = ({
               value={title}
               onChange={(e) => setTitle(e.target.value)}
               placeholder="Post title or topic summary..."
-              className="w-full px-3.5 py-2.5 text-sm bg-slate-950 text-slate-100 placeholder-slate-500 rounded-xl border border-slate-800 focus:outline-none focus:border-cyan-500/60 focus:ring-1 focus:ring-cyan-500/60"
+              className="w-full px-3.5 py-2.5 text-sm bg-slate-950 text-slate-100 placeholder-slate-500 rounded-md border border-slate-800 focus:outline-none focus:border-cyan-500/60 focus:ring-1 focus:ring-cyan-500/60"
             />
           </div>
 
@@ -180,7 +180,7 @@ export const CreatePostModal: React.FC<CreatePostModalProps> = ({
               value={body}
               onChange={(e) => setBody(e.target.value)}
               placeholder="Share thoughts, code snippets, or encrypted text notes..."
-              className="w-full px-3.5 py-2.5 text-sm bg-slate-950 text-slate-100 placeholder-slate-500 rounded-xl border border-slate-800 focus:outline-none focus:border-cyan-500/60 focus:ring-1 focus:ring-cyan-500/60 resize-y"
+              className="w-full px-3.5 py-2.5 text-sm bg-slate-950 text-slate-100 placeholder-slate-500 rounded-md border border-slate-800 focus:outline-none focus:border-cyan-500/60 focus:ring-1 focus:ring-cyan-500/60 resize-y"
             ></textarea>
           </div>
 
@@ -201,7 +201,7 @@ export const CreatePostModal: React.FC<CreatePostModalProps> = ({
                 handleFileSelect(e.dataTransfer.files);
               }}
               onClick={() => fileInputRef.current?.click()}
-              className={`border-2 border-dashed rounded-xl p-5 text-center cursor-pointer transition-all ${
+              className={`border-2 border-dashed rounded-md p-5 text-center cursor-pointer transition-all ${
                 isDragOver
                   ? "border-cyan-400 bg-cyan-500/10"
                   : "border-slate-800 bg-slate-950/60 hover:border-slate-700"
@@ -233,7 +233,7 @@ export const CreatePostModal: React.FC<CreatePostModalProps> = ({
                   {files.map((file, index) => (
                     <div
                       key={index}
-                      className="flex items-center space-x-2 px-3 py-1.5 bg-slate-950 border border-slate-800 rounded-lg text-xs text-slate-300"
+                      className="flex items-center space-x-2 px-3 py-1.5 bg-slate-950 border border-slate-800 rounded-md text-xs text-slate-300"
                     >
                       <Paperclip className="w-3.5 h-3.5 text-cyan-400" />
                       <span className="truncate max-w-[150px]">{file.name}</span>
@@ -269,7 +269,7 @@ export const CreatePostModal: React.FC<CreatePostModalProps> = ({
             <button
               type="submit"
               disabled={isSubmitting}
-              className="px-5 py-2.5 text-xs font-bold font-mono rounded-xl bg-gradient-to-r from-cyan-500 to-blue-600 hover:from-cyan-400 hover:to-blue-500 text-slate-950 shadow-lg shadow-cyan-500/20 disabled:opacity-50 flex items-center space-x-2 transition-all active:scale-95 cursor-pointer"
+              className="px-5 py-2.5 text-xs font-bold font-mono rounded-md bg-gradient-to-r from-cyan-500 to-blue-600 hover:from-cyan-400 hover:to-blue-500 text-slate-950 shadow-md shadow-cyan-500/20 disabled:opacity-50 flex items-center space-x-2 transition-all active:scale-95 cursor-pointer"
             >
               {isSubmitting ? (
                 <>

@@ -95,21 +95,21 @@ export const PostDetailModal: React.FC<PostDetailModalProps> = ({ post, onClose 
         >
           <button
             onClick={() => setSelectedImage(null)}
-            className="absolute top-4 right-4 text-slate-400 hover:text-white p-2 rounded-full bg-slate-900 border border-slate-800"
+            className="absolute top-4 right-4 text-slate-400 hover:text-white p-2 rounded-md bg-slate-900 border border-slate-800"
           >
             <X className="w-6 h-6" />
           </button>
           <img
             src={selectedImage}
             alt="Full size media"
-            className="max-w-full max-h-[85vh] object-contain rounded-lg border border-slate-800 shadow-2xl"
+            className="max-w-full max-h-[85vh] object-contain rounded-md border border-slate-800 shadow-2xl"
           />
           <a
             href={selectedImage}
             download
             target="_blank"
             rel="noreferrer"
-            className="mt-4 px-4 py-2 bg-cyan-500 hover:bg-cyan-400 text-slate-950 font-bold rounded-lg text-xs flex items-center space-x-2 shadow-lg"
+            className="mt-4 px-4 py-2 bg-cyan-500 hover:bg-cyan-400 text-slate-950 font-bold rounded-md text-xs flex items-center space-x-2 shadow-lg"
           >
             <Download className="w-4 h-4" />
             <span>Download Image</span>
@@ -119,14 +119,14 @@ export const PostDetailModal: React.FC<PostDetailModalProps> = ({ post, onClose 
 
       {/* Main Modal Card */}
       <div
-        className="relative w-full max-w-3xl bg-slate-900 border border-slate-800 rounded-2xl shadow-2xl overflow-hidden my-8"
+        className="relative w-full max-w-3xl bg-slate-900 border border-slate-800 rounded-lg shadow-2xl overflow-hidden my-8"
         onClick={(e) => e.stopPropagation()}
       >
         {/* Modal Header */}
         <div className="flex items-center justify-between px-6 py-4 border-b border-slate-800/80 bg-slate-950/50">
           <div className="flex items-center space-x-3">
             <div
-              className={`w-9 h-9 rounded-xl bg-gradient-to-br ${anonInfo.color} flex items-center justify-center text-white font-mono font-bold text-sm shadow-md`}
+              className={`w-9 h-9 rounded-md bg-gradient-to-br ${anonInfo.color} flex items-center justify-center text-white font-mono font-bold text-sm shadow-md`}
             >
               {anonInfo.handle.slice(5, 7).toUpperCase()}
             </div>
@@ -135,7 +135,7 @@ export const PostDetailModal: React.FC<PostDetailModalProps> = ({ post, onClose 
                 <span className="font-mono text-sm font-semibold text-white">
                   {anonInfo.handle}
                 </span>
-                <span className="px-2 py-0.5 text-[10px] font-mono rounded bg-cyan-500/10 text-cyan-400 border border-cyan-500/30">
+                <span className="px-2 py-0.5 text-[10px] font-mono rounded-sm bg-cyan-500/10 text-cyan-400 border border-cyan-500/30">
                   VERIFIED ANONYMOUS
                 </span>
               </div>
@@ -151,14 +151,14 @@ export const PostDetailModal: React.FC<PostDetailModalProps> = ({ post, onClose 
           <div className="flex items-center space-x-2">
             <button
               onClick={handleCopyLink}
-              className="p-2 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 transition-colors"
+              className="p-2 rounded-md bg-slate-800 hover:bg-slate-700 text-slate-300 transition-colors"
               title="Share post link"
             >
               {copied ? <Check className="w-4 h-4 text-emerald-400" /> : <Share2 className="w-4 h-4" />}
             </button>
             <button
               onClick={onClose}
-              className="p-2 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 transition-colors"
+              className="p-2 rounded-md bg-slate-800 hover:bg-slate-700 text-slate-300 transition-colors"
             >
               <X className="w-5 h-5" />
             </button>
@@ -174,7 +174,7 @@ export const PostDetailModal: React.FC<PostDetailModalProps> = ({ post, onClose 
 
           {/* Post Text Body */}
           {post.body && (
-            <div className="prose prose-invert max-w-none text-sm text-slate-300 leading-relaxed bg-slate-950/40 p-4 rounded-xl border border-slate-800/60 whitespace-pre-wrap">
+            <div className="prose prose-invert max-w-none text-sm text-slate-300 leading-relaxed bg-slate-950/40 p-4 rounded-md border border-slate-800/60 whitespace-pre-wrap">
               {post.body}
             </div>
           )}
@@ -200,7 +200,7 @@ export const PostDetailModal: React.FC<PostDetailModalProps> = ({ post, onClose 
                       <div
                         key={idx}
                         onClick={() => setSelectedImage(url)}
-                        className="group relative aspect-video bg-slate-950 border border-slate-800 rounded-xl overflow-hidden cursor-pointer hover:border-cyan-500/60 transition-colors"
+                        className="group relative aspect-video bg-slate-950 border border-slate-800 rounded-md overflow-hidden cursor-pointer hover:border-cyan-500/60 transition-colors"
                       >
                         <img
                           src={url}
@@ -215,7 +215,7 @@ export const PostDetailModal: React.FC<PostDetailModalProps> = ({ post, onClose 
                     );
                   } else if (isVid) {
                     return (
-                      <div key={idx} className="aspect-video bg-slate-950 border border-slate-800 rounded-xl overflow-hidden">
+                      <div key={idx} className="aspect-video bg-slate-950 border border-slate-800 rounded-md overflow-hidden">
                         <video controls src={url} className="w-full h-full object-contain" />
                       </div>
                     );
@@ -235,7 +235,7 @@ export const PostDetailModal: React.FC<PostDetailModalProps> = ({ post, onClose 
                       download={getCleanFileName(file)}
                       target="_blank"
                       rel="noreferrer"
-                      className="flex items-center space-x-2 px-3 py-2 text-xs font-mono rounded-lg bg-slate-950 border border-slate-800 text-cyan-300 hover:bg-slate-800 hover:border-cyan-500/50 transition-all shadow-sm"
+                      className="flex items-center space-x-2 px-3 py-2 text-xs font-mono rounded-md bg-slate-950 border border-slate-800 text-cyan-300 hover:bg-slate-800 hover:border-cyan-500/50 transition-all shadow-sm"
                     >
                       <Download className="w-3.5 h-3.5 text-cyan-400" />
                       <span className="truncate max-w-[200px]">{getCleanFileName(file)}</span>
@@ -257,7 +257,7 @@ export const PostDetailModal: React.FC<PostDetailModalProps> = ({ post, onClose 
               {comments.map((c) => (
                 <div
                   key={c.id}
-                  className="p-3 rounded-xl bg-slate-950/60 border border-slate-800/70 text-xs space-y-1"
+                  className="p-3 rounded-md bg-slate-950/60 border border-slate-800/70 text-xs space-y-1"
                 >
                   <div className="flex items-center justify-between text-[11px]">
                     <span className="font-mono font-semibold text-cyan-400">{c.handle}</span>
@@ -275,11 +275,11 @@ export const PostDetailModal: React.FC<PostDetailModalProps> = ({ post, onClose 
                 value={newCommentBody}
                 onChange={(e) => setNewCommentBody(e.target.value)}
                 placeholder="Write an anonymous reply..."
-                className="flex-1 px-3 py-2 text-xs bg-slate-950 text-slate-200 placeholder-slate-500 rounded-lg border border-slate-800 focus:outline-none focus:border-cyan-500/60 font-sans"
+                className="flex-1 px-3 py-2 text-xs bg-slate-950 text-slate-200 placeholder-slate-500 rounded-md border border-slate-800 focus:outline-none focus:border-cyan-500/60 font-sans"
               />
               <button
                 type="submit"
-                className="px-4 py-2 bg-cyan-500 hover:bg-cyan-400 text-slate-950 font-bold text-xs rounded-lg flex items-center space-x-1 transition-colors cursor-pointer"
+                className="px-4 py-2 bg-cyan-500 hover:bg-cyan-400 text-slate-950 font-bold text-xs rounded-md flex items-center space-x-1 transition-colors cursor-pointer"
               >
                 <Send className="w-3.5 h-3.5" />
                 <span>Reply</span>
@@ -293,7 +293,7 @@ export const PostDetailModal: React.FC<PostDetailModalProps> = ({ post, onClose 
           <span>FalseCrypt Ephemeral Vault</span>
           <button
             onClick={onClose}
-            className="px-4 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-200 transition-colors cursor-pointer"
+            className="px-4 py-1.5 rounded-md bg-slate-800 hover:bg-slate-700 text-slate-200 transition-colors cursor-pointer"
           >
             Close
           </button>

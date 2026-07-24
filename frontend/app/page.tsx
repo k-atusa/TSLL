@@ -100,7 +100,7 @@ export default function Home() {
       {/* Main Board Layout Container */}
       <main className="flex-1 max-w-6xl w-full mx-auto px-4 py-6 space-y-6">
         {/* Hero Banner / Board Status */}
-        <div className="relative rounded-2xl bg-gradient-to-r from-slate-900 via-slate-900/90 to-cyan-950/40 border border-slate-800/80 p-5 md:p-6 overflow-hidden">
+        <div className="relative rounded-md bg-gradient-to-r from-slate-900 via-slate-900/90 to-cyan-950/40 border border-slate-800/80 p-5 md:p-6 overflow-hidden">
           <div className="absolute top-0 right-0 w-64 h-64 bg-cyan-500/5 rounded-full blur-3xl -z-10 pointer-events-none"></div>
           <div className="flex flex-wrap items-center justify-between gap-4">
             <div>
@@ -122,7 +122,7 @@ export default function Home() {
               <button
                 onClick={loadPosts}
                 disabled={loading}
-                className="flex items-center space-x-1.5 px-3 py-2 text-xs font-mono rounded-lg bg-slate-900 border border-slate-800 hover:border-cyan-500/40 text-slate-300 hover:text-white transition-all cursor-pointer"
+                className="flex items-center space-x-1.5 px-3 py-2 text-xs font-mono rounded-md bg-slate-900 border border-slate-800 hover:border-cyan-500/40 text-slate-300 hover:text-white transition-all cursor-pointer"
                 title="Refresh feed"
               >
                 <RefreshCw className={`w-3.5 h-3.5 ${loading ? "animate-spin text-cyan-400" : ""}`} />
@@ -131,7 +131,7 @@ export default function Home() {
 
               <button
                 onClick={() => setIsCreateModalOpen(true)}
-                className="px-4 py-2 text-xs font-mono font-bold rounded-lg bg-cyan-500 hover:bg-cyan-400 text-slate-950 transition-all shadow-md cursor-pointer"
+                className="px-4 py-2 text-xs font-mono font-bold rounded-md bg-cyan-500 hover:bg-cyan-400 text-slate-950 transition-all shadow-md cursor-pointer"
               >
                 + Post Anon
               </button>
@@ -145,19 +145,19 @@ export default function Home() {
             {[1, 2, 3, 4].map((i) => (
               <div
                 key={i}
-                className="h-44 bg-slate-900/40 border border-slate-800/60 rounded-xl p-5 animate-pulse flex flex-col justify-between"
+                className="h-44 bg-slate-900/40 border border-slate-800/60 rounded-md p-5 animate-pulse flex flex-col justify-between"
               >
                 <div className="space-y-3">
-                  <div className="h-4 bg-slate-800 rounded w-1/3"></div>
-                  <div className="h-5 bg-slate-800/80 rounded w-3/4"></div>
-                  <div className="h-3 bg-slate-800/60 rounded w-full"></div>
+                  <div className="h-4 bg-slate-800 rounded-sm w-1/3"></div>
+                  <div className="h-5 bg-slate-800/80 rounded-sm w-3/4"></div>
+                  <div className="h-3 bg-slate-800/60 rounded-sm w-full"></div>
                 </div>
-                <div className="h-4 bg-slate-800/50 rounded w-1/4"></div>
+                <div className="h-4 bg-slate-800/50 rounded-sm w-1/4"></div>
               </div>
             ))}
           </div>
         ) : filteredPosts.length === 0 ? (
-          <div className="text-center py-16 px-4 rounded-2xl bg-slate-900/40 border border-slate-800/60 space-y-3">
+          <div className="text-center py-16 px-4 rounded-md bg-slate-900/40 border border-slate-800/60 space-y-3">
             <Layers className="w-10 h-10 mx-auto text-slate-600 animate-bounce" />
             <h3 className="text-base font-bold text-slate-300 font-mono">No Posts Found</h3>
             <p className="text-xs text-slate-500 max-w-sm mx-auto">
@@ -165,7 +165,7 @@ export default function Home() {
             </p>
             <button
               onClick={() => setIsCreateModalOpen(true)}
-              className="mt-2 px-4 py-2 text-xs font-mono font-bold rounded-lg bg-cyan-500 hover:bg-cyan-400 text-slate-950 transition-all shadow-md inline-flex items-center space-x-1.5 cursor-pointer"
+              className="mt-2 px-4 py-2 text-xs font-mono font-bold rounded-md bg-cyan-500 hover:bg-cyan-400 text-slate-950 transition-all shadow-md inline-flex items-center space-x-1.5 cursor-pointer"
             >
               <span>+ Create First Post</span>
             </button>

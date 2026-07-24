@@ -13,7 +13,7 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "FalseCrypt // AnonBoard - Anonymous Bulletin & File Vault",
+  title: "FC Community // AnonBoard - Anonymous Bulletin & File Vault",
   description:
     "Encrypted, anonymous, ephemeral community bulletin board. Post text, images, and files without registration. Auto-capacity storage enforcement.",
 };
