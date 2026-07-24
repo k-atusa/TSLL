@@ -22,7 +22,8 @@ import {
   Sparkles,
 } from "lucide-react";
 import { Header } from "@/components/Header";
-import { createPost, generateRandomAnonId } from "@/lib/api";
+import { PostBodyContent } from "@/components/PostBodyContent";
+import { buildAttachmentToken, createPost, generateRandomAnonId } from "@/lib/api";
 import { BoardCategory } from "@/lib/types";
 import { GALLERIES } from "@/lib/constants";
 
@@ -33,16 +34,39 @@ export default function CreatePostPage() {
 
   const previewAnon = React.useMemo(() => generateRandomAnonId(), []);
 
+  type DraftAttachment = {
+    id: string;
+    file: File;
+  };
+
   const [nickname, setNickname] = useState("");
   const [title, setTitle] = useState("");
   const [body, setBody] = useState("");
   const [selectedCategory, setSelectedCategory] = useState<BoardCategory>("general");
-  const [files, setFiles] = useState<File[]>([]);
+  const [attachments, setAttachments] = useState<DraftAttachment[]>([]);
   const [activeTab, setActiveTab] = useState<"edit" | "preview">("edit");
   const [submitting, setSubmitting] = useState(false);
   const [dragActive, setDragActive] = useState(false);
 
   const textareaRef = useRef<HTMLTextAreaElement>(null);
+
+  const insertAttachmentToken = (attachmentId: string) => {
+    if (!textareaRef.current) return;
+
+    const el = textareaRef.current;
+    const token = `${buildAttachmentToken(attachmentId)}\n`;
+    const start = el.selectionStart ?? body.length;
+    const end = el.selectionEnd ?? body.length;
+    const nextBody = `${body.slice(0, start)}${token}${body.slice(end)}`;
+
+    setBody(nextBody);
+
+    requestAnimationFrame(() => {
+      el.focus();
+      const nextCursor = start + token.length;
+      el.setSelectionRange(nextCursor, nextCursor);
+    });
+  };
 
   // Markdown Formatting Helper
   const insertFormatting = (prefix: string, suffix: string = "") => {
@@ -64,7 +88,11 @@ export default function CreatePostPage() {
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files) {
-      setFiles((prev) => [...prev, ...Array.from(e.target.files!)]);
+      const selected = Array.from(e.target.files).map((file) => ({
+        id: globalThis.crypto?.randomUUID?.() ?? `${Date.now()}-${Math.random()}`,
+        file,
+      }));
+      setAttachments((prev) => [...prev, ...selected]);
     }
   };
 
@@ -72,12 +100,16 @@ export default function CreatePostPage() {
     e.preventDefault();
     setDragActive(false);
     if (e.dataTransfer.files) {
-      setFiles((prev) => [...prev, ...Array.from(e.dataTransfer.files)]);
+      const selected = Array.from(e.dataTransfer.files).map((file) => ({
+        id: globalThis.crypto?.randomUUID?.() ?? `${Date.now()}-${Math.random()}`,
+        file,
+      }));
+      setAttachments((prev) => [...prev, ...selected]);
     }
   };
 
   const removeFile = (index: number) => {
-    setFiles((prev) => prev.filter((_, i) => i !== index));
+    setAttachments((prev) => prev.filter((_, i) => i !== index));
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -91,78 +123,13 @@ export default function CreatePostPage() {
     const finalHandle = nickname.trim();
 
     try {
-      const created = await createPost(fullTitle, body, files, finalHandle || undefined);
+      const created = await createPost(fullTitle, body, attachments, finalHandle || undefined);
       router.push(`/posts/${created.id}`);
     } catch (err) {
       console.error("Failed to create post", err);
       alert("Failed to publish post. Please check backend connection.");
       setSubmitting(false);
     }
-  };
-
-  // Simple Markdown to JSX preview renderer
-  const renderMarkdownPreview = (text: string) => {
-    if (!text.trim()) {
-      return (
-        <p className="text-slate-500 italic text-sm">
-          No content written yet. Switch to the editor to write your post body.
-        </p>
-      );
-    }
-
-    const lines = text.split("\n");
-    return lines.map((line, idx) => {
-      if (line.startsWith("### ")) {
-        return (
-          <h3 key={idx} className="text-xl font-bold text-cyan-300 mt-4 mb-2">
-            {line.replace("### ", "")}
-          </h3>
-        );
-      }
-      if (line.startsWith("## ")) {
-        return (
-          <h2 key={idx} className="text-2xl font-bold text-white mt-5 mb-2 border-b border-slate-800 pb-1">
-            {line.replace("## ", "")}
-          </h2>
-        );
-      }
-      if (line.startsWith("# ")) {
-        return (
-          <h1 key={idx} className="text-3xl font-extrabold text-white mt-6 mb-3">
-            {line.replace("# ", "")}
-          </h1>
-        );
-      }
-      if (line.startsWith("> ")) {
-        return (
-          <blockquote key={idx} className="border-l-4 border-cyan-500 pl-4 py-1.5 my-2 text-slate-300 italic bg-slate-950/40 rounded-r-sm">
-            {line.replace("> ", "")}
-          </blockquote>
-        );
-      }
-      if (line.startsWith("- ") || line.startsWith("* ")) {
-        return (
-          <li key={idx} className="ml-5 list-disc text-slate-200 my-1">
-            {line.replace(/^[-*]\s+/, "")}
-          </li>
-        );
-      }
-      if (line.startsWith("```")) {
-        return (
-          <div key={idx} className="my-2 p-3 bg-slate-950 font-mono text-xs text-cyan-300 rounded border border-slate-800">
-            {line.replace(/```/g, "")}
-          </div>
-        );
-      }
-      if (!line.trim()) {
-        return <div key={idx} className="h-3"></div>;
-      }
-      return (
-        <p key={idx} className="text-base text-slate-200 leading-relaxed my-1">
-          {line}
-        </p>
-      );
-    });
   };
 
   return (
@@ -359,14 +326,14 @@ export default function CreatePostPage() {
                   rows={10}
                   value={body}
                   onChange={(e) => setBody(e.target.value)}
-                  placeholder="본문 내용을 입력하세요. 마크다운 문법이 자동으로 지원됩니다."
+                  placeholder="본문 내용을 입력하세요. 첨부파일 버튼으로 원하는 위치에 이미지를 끼워 넣을 수 있습니다."
                   className="w-full px-4 py-3 text-base bg-slate-950 text-slate-100 placeholder-slate-500 rounded-b-md border border-t-0 border-slate-800 focus:outline-none focus:border-cyan-500/60 font-sans resize-y"
                 ></textarea>
               </div>
             ) : (
               /* Live Preview Mode */
               <div className="min-h-[280px] p-6 bg-slate-950 rounded-md border border-slate-800 font-sans">
-                {renderMarkdownPreview(body)}
+                <PostBodyContent body={body} className="space-y-1" />
               </div>
             )}
           </div>
@@ -408,20 +375,28 @@ export default function CreatePostPage() {
             </div>
 
             {/* Attached Files List */}
-            {files.length > 0 && (
+            {attachments.length > 0 && (
               <div className="space-y-2 pt-2">
-                <p className="text-xs font-sans text-slate-400">첨부된 파일 ({files.length}개):</p>
+                <p className="text-xs font-sans text-slate-400">첨부된 파일 ({attachments.length}개):</p>
                 <div className="flex flex-wrap gap-2">
-                  {files.map((file, idx) => (
+                  {attachments.map((attachment, idx) => (
                     <div
-                      key={idx}
+                      key={attachment.id}
                       className="flex items-center space-x-2 px-3 py-1.5 rounded bg-slate-950 border border-slate-800 text-xs font-mono text-slate-300"
                     >
                       <Paperclip className="w-3.5 h-3.5 text-cyan-400" />
-                      <span className="truncate max-w-[180px]">{file.name}</span>
+                      <span className="truncate max-w-[180px]">{attachment.file.name}</span>
                       <span className="text-slate-500">
-                        ({(file.size / 1024).toFixed(1)} KB)
+                        ({(attachment.file.size / 1024).toFixed(1)} KB)
                       </span>
+                      <button
+                        type="button"
+                        onClick={() => insertAttachmentToken(attachment.id)}
+                        className="rounded bg-cyan-500/10 px-2 py-0.5 text-[10px] font-bold text-cyan-300 transition-colors hover:bg-cyan-500/20"
+                        title="커서 위치에 삽입"
+                      >
+                        삽입
+                      </button>
                       <button
                         type="button"
                         onClick={() => removeFile(idx)}

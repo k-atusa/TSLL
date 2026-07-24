@@ -6,11 +6,7 @@ import {
   Download,
   Share2,
   Check,
-  Shield,
-  ThumbsUp,
-  Flame,
   Paperclip,
-  FileText,
   Clock,
   Send,
   Eye,
@@ -27,6 +23,7 @@ import {
   getCleanFileName,
   normalizeAnonHandle,
 } from "@/lib/api";
+import { PostBodyContent } from "@/components/PostBodyContent";
 
 interface PostDetailModalProps {
   post: Post | null;
@@ -182,8 +179,12 @@ export const PostDetailModal: React.FC<PostDetailModalProps> = ({ post, onClose 
 
           {/* Post Text Body */}
           {post.body && (
-            <div className="prose prose-invert max-w-none text-sm text-slate-300 leading-relaxed bg-slate-950/40 p-4 rounded-md border border-slate-800/60 whitespace-pre-wrap">
-              {post.body}
+            <div className="prose prose-invert max-w-none text-sm text-slate-300 leading-relaxed bg-slate-950/40 p-4 rounded-md border border-slate-800/60">
+              <PostBodyContent
+                body={post.body}
+                attachments={post.attachments}
+                onImageClick={setSelectedImage}
+              />
             </div>
           )}
 
@@ -201,7 +202,6 @@ export const PostDetailModal: React.FC<PostDetailModalProps> = ({ post, onClose 
                   const url = getFileUrl(file);
                   const isImg = isImageFile(file);
                   const isVid = isVideoFile(file);
-                  const cleanName = getCleanFileName(file);
 
                   if (isImg) {
                     return (

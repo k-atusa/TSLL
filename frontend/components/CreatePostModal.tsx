@@ -5,9 +5,7 @@ import {
   X,
   UploadCloud,
   File,
-  Image as ImageIcon,
   Paperclip,
-  Trash2,
   Shield,
   Loader2,
   CheckCircle2,
@@ -15,6 +13,7 @@ import {
 } from "lucide-react";
 import { createPost, generateRandomAnonId } from "@/lib/api";
 import { BoardCategory, Post } from "@/lib/types";
+import { buildAttachmentToken } from "@/lib/api";
 
 interface CreatePostModalProps {
   isOpen: boolean;
@@ -41,12 +40,18 @@ export const CreatePostModal: React.FC<CreatePostModalProps> = ({
   const [nickname, setNickname] = useState("");
   const [title, setTitle] = useState("");
   const [body, setBody] = useState("");
-  const [files, setFiles] = useState<File[]>([]);
+  type DraftAttachment = {
+    id: string;
+    file: File;
+  };
+
+  const [attachments, setAttachments] = useState<DraftAttachment[]>([]);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const [isDragOver, setIsDragOver] = useState(false);
 
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const textareaRef = useRef<HTMLTextAreaElement>(null);
 
   // Generate transient anon ID for modal preview
   const previewAnon = React.useMemo(() => generateRandomAnonId(), []);
@@ -55,12 +60,32 @@ export const CreatePostModal: React.FC<CreatePostModalProps> = ({
 
   const handleFileSelect = (selectedFiles: FileList | null) => {
     if (!selectedFiles) return;
-    const newFiles = Array.from(selectedFiles);
-    setFiles((prev) => [...prev, ...newFiles]);
+    const newAttachments = Array.from(selectedFiles).map((file) => ({
+      id: globalThis.crypto?.randomUUID?.() ?? `${Date.now()}-${Math.random()}`,
+      file,
+    }));
+    setAttachments((prev) => [...prev, ...newAttachments]);
   };
 
   const handleRemoveFile = (index: number) => {
-    setFiles((prev) => prev.filter((_, i) => i !== index));
+    setAttachments((prev) => prev.filter((_, i) => i !== index));
+  };
+
+  const insertAttachmentToken = (attachmentId: string) => {
+    if (!textareaRef.current) return;
+
+    const el = textareaRef.current;
+    const token = `${buildAttachmentToken(attachmentId)}\n`;
+    const start = el.selectionStart ?? body.length;
+    const end = el.selectionEnd ?? body.length;
+    const nextBody = `${body.slice(0, start)}${token}${body.slice(end)}`;
+    setBody(nextBody);
+
+    requestAnimationFrame(() => {
+      el.focus();
+      const nextCursor = start + token.length;
+      el.setSelectionRange(nextCursor, nextCursor);
+    });
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -79,17 +104,17 @@ export const CreatePostModal: React.FC<CreatePostModalProps> = ({
     const finalHandle = nickname.trim();
 
     try {
-      const newPost = await createPost(finalTitle, body, files, finalHandle || undefined);
+      const newPost = await createPost(finalTitle, body, attachments, finalHandle || undefined);
       onPostCreated(newPost);
       // Reset form
       setNickname("");
       setTitle("");
       setBody("");
-      setFiles([]);
+      setAttachments([]);
       onClose();
-    } catch (err: any) {
+    } catch (err) {
       console.error("Post creation error", err);
-      setErrorMsg(err.message || "Failed to upload post to server.");
+      setErrorMsg(err instanceof Error ? err.message : "Failed to upload post to server.");
     } finally {
       setIsSubmitting(false);
     }
@@ -196,6 +221,7 @@ export const CreatePostModal: React.FC<CreatePostModalProps> = ({
               BODY CONTENT (MARKDOWN SUPPORTED)
             </label>
             <textarea
+              ref={textareaRef}
               rows={5}
               value={body}
               onChange={(e) => setBody(e.target.value)}
@@ -244,22 +270,29 @@ export const CreatePostModal: React.FC<CreatePostModalProps> = ({
             </div>
 
             {/* Selected File List */}
-            {files.length > 0 && (
+            {attachments.length > 0 && (
               <div className="mt-3 space-y-2">
                 <div className="text-[11px] font-mono text-slate-400">
-                  Attached Files ({files.length}):
+                  Attached Files ({attachments.length}):
                 </div>
                 <div className="flex flex-wrap gap-2">
-                  {files.map((file, index) => (
+                  {attachments.map((attachment, index) => (
                     <div
-                      key={index}
+                      key={attachment.id}
                       className="flex items-center space-x-2 px-3 py-1.5 bg-slate-950 border border-slate-800 rounded-md text-xs text-slate-300"
                     >
                       <Paperclip className="w-3.5 h-3.5 text-cyan-400" />
-                      <span className="truncate max-w-[150px]">{file.name}</span>
+                      <span className="truncate max-w-[150px]">{attachment.file.name}</span>
                       <span className="text-[10px] text-slate-500 font-mono">
-                        ({(file.size / 1024).toFixed(0)}KB)
+                        ({(attachment.file.size / 1024).toFixed(0)}KB)
                       </span>
+                      <button
+                        type="button"
+                        onClick={() => insertAttachmentToken(attachment.id)}
+                        className="rounded bg-cyan-500/10 px-2 py-0.5 text-[10px] font-bold text-cyan-300 transition-colors hover:bg-cyan-500/20"
+                      >
+                        Insert
+                      </button>
                       <button
                         type="button"
                         onClick={(e) => {

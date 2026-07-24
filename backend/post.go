@@ -22,12 +22,18 @@ type Comment struct {
 	CreatedAt int64  `json:"createdAt"`
 }
 
+type Attachment struct {
+	ID       string `json:"id"`
+	Filename string `json:"filename"`
+}
+
 type Post struct {
 	ID        string    `json:"id"`
 	Handle    string    `json:"handle,omitempty"`
 	Title     string    `json:"title"`
 	Body      string    `json:"body"`
 	Files     []string  `json:"files"`
+	Attachments []Attachment `json:"attachments,omitempty"`
 	CreatedAt int64     `json:"createdAt"`
 	Likes     int       `json:"likes"`
 	Dislikes  int       `json:"dislikes"`
@@ -215,7 +221,13 @@ func handleCreatePost(w http.ResponseWriter, r *http.Request) {
 
 	// handle files
 	files := r.MultipartForm.File["files"]
+	attachmentIDs := r.MultipartForm.Value["attachmentIds"]
 	for _, fileHeader := range files {
+		attachmentID := fmt.Sprintf("file-%d", len(post.Attachments))
+		if len(attachmentIDs) > len(post.Attachments) && strings.TrimSpace(attachmentIDs[len(post.Attachments)]) != "" {
+			attachmentID = strings.TrimSpace(attachmentIDs[len(post.Attachments)])
+		}
+
 		file, err := fileHeader.Open()
 		if err != nil {
 			continue
@@ -225,6 +237,7 @@ func handleCreatePost(w http.ResponseWriter, r *http.Request) {
 		// get filename, save
 		filename := fmt.Sprintf("%s_%s", id, filepath.Base(fileHeader.Filename))
 		post.Files = append(post.Files, filename)
+		post.Attachments = append(post.Attachments, Attachment{ID: attachmentID, Filename: filename})
 		dst, err := os.Create(filepath.Join(config.PostDir, "files", filename))
 		if err != nil {
 			continue

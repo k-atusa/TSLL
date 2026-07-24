@@ -2,15 +2,10 @@
 
 import React, { useState } from "react";
 import {
-  Flame,
   ThumbsUp,
   ThumbsDown,
-  Shield,
   Share2,
-  FileText,
-  Image as ImageIcon,
   Check,
-  ExternalLink,
   MessageSquare,
   Paperclip,
 } from "lucide-react";
@@ -22,8 +17,8 @@ import {
   getHandleBadgeText,
   getFileUrl,
   isImageFile,
-  isVideoFile,
   getCleanFileName,
+  stripAttachmentTokens,
   likePost,
   dislikePost,
   normalizeAnonHandle,
@@ -133,7 +128,7 @@ export const PostCard: React.FC<PostCardProps> = ({ post }) => {
       {/* Body preview */}
       {post.body && (
         <p className="text-xs text-slate-300 line-clamp-3 mb-3 leading-relaxed whitespace-pre-wrap">
-          {post.body}
+          {stripAttachmentTokens(post.body)}
         </p>
       )}
 

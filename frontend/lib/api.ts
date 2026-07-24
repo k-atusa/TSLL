@@ -1,5 +1,10 @@
 import { Post, StorageStats } from "./types";
 
+export interface AttachmentUpload {
+  id: string;
+  file: File;
+}
+
 const API_BASE = "";
 
 // Helper: Format nanosecond timestamp to YYYY.MM.DD. HH:mm:ss (24h + seconds)
@@ -93,6 +98,14 @@ export function getCleanFileName(filename: string): string {
   return filename;
 }
 
+export function buildAttachmentToken(id: string): string {
+  return `[[attach:${id}]]`;
+}
+
+export function stripAttachmentTokens(text: string): string {
+  return text.replace(/\[\[attach:[a-zA-Z0-9-]+\]\]/g, "");
+}
+
 // API: Fetch all posts
 export async function fetchPosts(): Promise<Post[]> {
   try {
@@ -155,7 +168,7 @@ export async function fetchPostDetail(id: string): Promise<Post | null> {
 export async function createPost(
   title: string,
   body: string,
-  files: File[],
+  attachments: AttachmentUpload[],
   handle?: string,
 ): Promise<Post> {
   const formData = new FormData();
@@ -165,8 +178,9 @@ export async function createPost(
     formData.append("handle", handle);
   }
 
-  files.forEach((file) => {
-    formData.append("files", file);
+  attachments.forEach((attachment) => {
+    formData.append("attachmentIds", attachment.id);
+    formData.append("files", attachment.file);
   });
 
   const res = await fetch(`${API_BASE}/api/com/posts`, {

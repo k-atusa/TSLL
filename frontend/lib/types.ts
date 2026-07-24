@@ -5,12 +5,18 @@ export interface Comment {
   createdAt: number;
 }
 
+export interface PostAttachment {
+  id: string;
+  filename: string;
+}
+
 export interface Post {
   id: string;
   handle?: string;
   title: string;
   body: string;
   files: string[];
+  attachments?: PostAttachment[];
   createdAt: number; // nanoseconds timestamp
   likes?: number;
   dislikes?: number;
