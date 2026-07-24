@@ -152,7 +152,6 @@ export default function PostDetailPage({ params }: PageProps) {
           onSearchChange={() => {}}
           sortMode="latest"
           onSortChange={() => {}}
-          onOpenCreateModal={() => setIsCreateModalOpen(true)}
           postCount={0}
         />
         <main className="flex-1 max-w-4xl w-full mx-auto px-4 py-8 space-y-6">
@@ -224,7 +223,6 @@ export default function PostDetailPage({ params }: PageProps) {
         onSearchChange={() => {}}
         sortMode="latest"
         onSortChange={() => {}}
-        onOpenCreateModal={() => setIsCreateModalOpen(true)}
         postCount={0}
       />
 
@@ -237,7 +235,7 @@ export default function PostDetailPage({ params }: PageProps) {
             className="inline-flex items-center space-x-2 text-sm font-mono font-medium text-slate-400 hover:text-cyan-400 transition-colors bg-slate-900/60 border border-slate-800 px-3.5 py-2 rounded-md"
           >
             <ArrowLeft className="w-4 h-4" />
-            <span>{t("backToFeed")}</span>
+            <span>목록으로</span>
           </Link>
 
           {categoryTag && (
@@ -370,29 +368,29 @@ export default function PostDetailPage({ params }: PageProps) {
           )}
 
           {/* Post Reactions / Likes Bar */}
-          <div className="pt-6 border-t border-slate-800/80 flex items-center space-x-3">
+          <div className="pt-6 border-t border-slate-800/80 flex items-center space-x-3 font-mono">
             <button
               onClick={handleLike}
-              className={`flex items-center space-x-2 px-4 py-2 rounded-md border text-xs md:text-sm font-mono transition-all cursor-pointer ${
+              className={`flex items-center space-x-2 px-4 py-2 rounded-md border text-xs md:text-sm font-semibold transition-all cursor-pointer ${
                 hasLiked
                   ? "bg-cyan-500/20 text-cyan-300 border-cyan-500/50 font-bold"
                   : "bg-slate-950 text-slate-300 border-slate-800 hover:text-white hover:border-slate-700"
               }`}
             >
               <ThumbsUp className={`w-4 h-4 ${hasLiked ? "text-cyan-400 fill-cyan-400/20" : "text-cyan-400"}`} />
-              <span>{t("like")} ({likesCount})</span>
+              <span>개추 ({likesCount})</span>
             </button>
 
             <button
               onClick={handleDislike}
-              className={`flex items-center space-x-2 px-4 py-2 rounded-md border text-xs md:text-sm font-mono transition-all cursor-pointer ${
+              className={`flex items-center space-x-2 px-4 py-2 rounded-md border text-xs md:text-sm font-semibold transition-all cursor-pointer ${
                 hasDisliked
                   ? "bg-rose-500/20 text-rose-300 border-rose-500/50 font-bold"
                   : "bg-slate-950 text-slate-300 border-slate-800 hover:text-white hover:border-slate-700"
               }`}
             >
               <ThumbsDown className={`w-4 h-4 ${hasDisliked ? "text-rose-400 fill-rose-400/20" : "text-rose-400"}`} />
-              <span>{t("dislike")} ({dislikesCount})</span>
+              <span>비추 ({dislikesCount})</span>
             </button>
           </div>
         </article>
@@ -402,14 +400,14 @@ export default function PostDetailPage({ params }: PageProps) {
           <div className="border-b border-slate-800/80 pb-4">
             <h3 className="text-base md:text-lg font-bold font-mono text-white flex items-center space-x-2">
               <MessageSquare className="w-5 h-5 text-cyan-400" />
-              <span>{t("comments").toUpperCase()} ({comments.length})</span>
+              <span>댓글 ({comments.length})</span>
             </h3>
           </div>
 
           {/* Comment List */}
           {comments.length === 0 ? (
             <div className="py-8 text-center text-slate-500 text-sm font-mono">
-              {t("comments")} (0)
+              작성된 댓글이 없습니다. 첫 댓글을 남겨보세요!
             </div>
           ) : (
             <div className="divide-y divide-slate-800/60">
@@ -436,23 +434,23 @@ export default function PostDetailPage({ params }: PageProps) {
           {/* Write Reply Form */}
           <form onSubmit={handleAddCommentSubmit} className="space-y-3 pt-4 border-t border-slate-800/80">
             <label className="block text-xs font-mono font-medium text-slate-400">
-              {t("writeComment")}
+              댓글 작성하기
             </label>
             <textarea
               rows={3}
               value={newCommentBody}
               onChange={(e) => setNewCommentBody(e.target.value)}
-              placeholder={t("writeComment")}
+              placeholder="댓글을 입력하세요..."
               className="w-full px-4 py-3 text-sm md:text-base bg-slate-950 text-slate-100 placeholder-slate-500 rounded-md border border-slate-800 focus:outline-none focus:border-cyan-500/60 focus:ring-1 focus:ring-cyan-500/60 resize-y font-sans"
             ></textarea>
             <div className="flex justify-end">
               <button
                 type="submit"
                 disabled={isSubmittingComment || !newCommentBody.trim()}
-                className="px-5 py-2.5 bg-cyan-500 hover:bg-cyan-400 text-slate-950 font-bold text-xs md:text-sm rounded-md flex items-center space-x-2 transition-all shadow-md disabled:opacity-50 cursor-pointer"
+                className="px-5 py-2.5 bg-cyan-500 hover:bg-cyan-400 text-slate-950 font-bold text-xs md:text-sm rounded-md flex items-center space-x-2 transition-all shadow-md disabled:opacity-50 cursor-pointer font-sans"
               >
                 <Send className="w-4 h-4" />
-                <span>{isSubmittingComment ? t("posting") : t("submitComment")}</span>
+                <span>{isSubmittingComment ? "등록 중..." : "댓글 등록"}</span>
               </button>
             </div>
           </form>

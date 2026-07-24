@@ -24,19 +24,12 @@ import {
 import { Header } from "@/components/Header";
 import { createPost } from "@/lib/api";
 import { BoardCategory } from "@/lib/types";
-import { useLanguage } from "@/lib/LanguageContext";
+import { GALLERIES } from "@/lib/constants";
 
 export default function CreatePostPage() {
   const router = useRouter();
-  const { t } = useLanguage();
 
-  const CATEGORIES: { id: BoardCategory; translationKey: string; prefix: string }[] = [
-    { id: "general", translationKey: "general", prefix: "[General]" },
-    { id: "crypto", translationKey: "crypto", prefix: "[Crypto]" },
-    { id: "tech", translationKey: "tech", prefix: "[Tech]" },
-    { id: "news", translationKey: "news", prefix: "[News]" },
-    { id: "files", translationKey: "files", prefix: "[Files]" },
-  ];
+  const CATEGORIES = GALLERIES.filter((g) => g.id !== "all" && g.id !== "hot");
 
   const [title, setTitle] = useState("");
   const [body, setBody] = useState("");
@@ -90,8 +83,7 @@ export default function CreatePostPage() {
 
     setSubmitting(true);
 
-    const catObj = CATEGORIES.find((c) => c.id === selectedCategory);
-    const prefix = catObj ? catObj.prefix : "[General]";
+    const prefix = `[${selectedCategory}]`;
     const fullTitle = title.startsWith("[") ? title : `${prefix} ${title.trim()}`;
 
     try {
@@ -179,35 +171,34 @@ export default function CreatePostPage() {
         onSearchChange={() => {}}
         sortMode="latest"
         onSortChange={() => {}}
-        onOpenCreateModal={() => {}}
         postCount={0}
       />
 
       <main className="flex-1 max-w-4xl w-full mx-auto px-4 py-8 space-y-6">
         {/* Navigation Bar */}
-        <div className="flex items-center justify-between">
+        <div className="flex items-center justify-between font-sans">
           <Link
             href="/"
-            className="inline-flex items-center space-x-2 text-sm font-mono font-medium text-slate-400 hover:text-cyan-400 transition-colors bg-slate-900/60 border border-slate-800 px-3.5 py-2 rounded-md"
+            className="inline-flex items-center space-x-2 text-sm font-medium text-slate-400 hover:text-cyan-400 transition-colors bg-slate-900/60 border border-slate-800 px-3.5 py-2 rounded-md"
           >
             <ArrowLeft className="w-4 h-4" />
-            <span>{t("backToFeed")}</span>
+            <span>목록으로</span>
           </Link>
 
           <div className="flex items-center space-x-2 text-xs font-mono text-cyan-400">
             <Sparkles className="w-4 h-4" />
-            <span>FCINSIDE MARKDOWN EDITOR</span>
+            <span>FCINSIDE 마크다운 에디터</span>
           </div>
         </div>
 
         {/* Create Post Form */}
-        <form onSubmit={handleSubmit} className="bg-slate-900/80 border border-slate-800 rounded-md p-6 md:p-8 shadow-xl space-y-6">
-          <h1 className="text-2xl font-bold font-mono text-white">{t("createTitle")}</h1>
+        <form onSubmit={handleSubmit} className="bg-slate-900/80 border border-slate-800 rounded-md p-6 md:p-8 shadow-xl space-y-6 font-sans">
+          <h1 className="text-2xl font-bold text-white">새 글 작성</h1>
 
           {/* Category Selection */}
           <div className="space-y-2">
-            <label className="block text-xs font-mono font-medium text-slate-400 uppercase tracking-wider">
-              {t("selectCategory")}
+            <label className="block text-xs font-medium text-slate-400 uppercase tracking-wider">
+              갤러리 선택
             </label>
             <div className="flex flex-wrap gap-2">
               {CATEGORIES.map((cat) => (
@@ -215,13 +206,13 @@ export default function CreatePostPage() {
                   key={cat.id}
                   type="button"
                   onClick={() => setSelectedCategory(cat.id)}
-                  className={`px-3.5 py-2 rounded-md text-xs font-mono font-medium transition-all cursor-pointer ${
+                  className={`px-3.5 py-2 rounded-md text-xs font-medium transition-all cursor-pointer ${
                     selectedCategory === cat.id
-                      ? "bg-cyan-500/20 text-cyan-300 border border-cyan-500/50 shadow-sm"
+                      ? "bg-cyan-500/20 text-cyan-300 border border-cyan-500/50 shadow-sm font-bold"
                       : "bg-slate-950 text-slate-400 border border-slate-800 hover:text-white"
                   }`}
                 >
-                  {t(cat.translationKey)}
+                  {cat.icon} {cat.name}
                 </button>
               ))}
             </div>
@@ -229,15 +220,15 @@ export default function CreatePostPage() {
 
           {/* Title Field */}
           <div className="space-y-2">
-            <label className="block text-xs font-mono font-medium text-slate-400 uppercase tracking-wider">
-              {t("postTitle")} <span className="text-cyan-400">*</span>
+            <label className="block text-xs font-medium text-slate-400 uppercase tracking-wider">
+              제목 <span className="text-cyan-400">*</span>
             </label>
             <input
               type="text"
               required
               value={title}
               onChange={(e) => setTitle(e.target.value)}
-              placeholder={t("postTitlePlaceholder")}
+              placeholder="제목을 입력하세요..."
               className="w-full px-4 py-3 text-base bg-slate-950 text-slate-100 placeholder-slate-500 rounded-md border border-slate-800 focus:outline-none focus:border-cyan-500/60 focus:ring-1 focus:ring-cyan-500/60 font-sans"
             />
           </div>
@@ -245,12 +236,12 @@ export default function CreatePostPage() {
           {/* WYSIWYG Markdown Body Editor */}
           <div className="space-y-2">
             <div className="flex items-center justify-between border-b border-slate-800 pb-2">
-              <label className="text-xs font-mono font-medium text-slate-400 uppercase tracking-wider">
-                {t("postContent")}
+              <label className="text-xs font-medium text-slate-400 uppercase tracking-wider">
+                본문 내용 (마크다운 지원)
               </label>
 
               {/* Edit / Preview Tabs */}
-              <div className="flex items-center space-x-1 bg-slate-950 p-1 rounded-md border border-slate-800 text-xs font-mono">
+              <div className="flex items-center space-x-1 bg-slate-950 p-1 rounded-md border border-slate-800 text-xs font-sans">
                 <button
                   type="button"
                   onClick={() => setActiveTab("edit")}
@@ -259,7 +250,7 @@ export default function CreatePostPage() {
                   }`}
                 >
                   <Edit3 className="w-3.5 h-3.5" />
-                  <span>{t("editor")}</span>
+                  <span>에디터</span>
                 </button>
 
                 <button
@@ -270,7 +261,7 @@ export default function CreatePostPage() {
                   }`}
                 >
                   <Eye className="w-3.5 h-3.5" />
-                  <span>{t("preview")}</span>
+                  <span>미리보기</span>
                 </button>
               </div>
             </div>
@@ -437,7 +428,7 @@ export default function CreatePostPage() {
               className="px-6 py-3 bg-cyan-500 hover:bg-cyan-400 text-slate-950 font-bold text-sm rounded-md flex items-center space-x-2 transition-all shadow-lg shadow-cyan-500/20 disabled:opacity-50 cursor-pointer"
             >
               <Send className="w-4 h-4" />
-              <span>{submitting ? t("publishing") : t("publish")}</span>
+              <span>{submitting ? "게시글 등록 중..." : "게시글 등록"}</span>
             </button>
           </div>
         </form>

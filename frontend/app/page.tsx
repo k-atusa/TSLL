@@ -7,11 +7,10 @@ import { StorageBar } from "@/components/StorageBar";
 import { PostCard } from "@/components/PostCard";
 import { fetchPosts, fetchStorageStats } from "@/lib/api";
 import { BoardCategory, Post, SortMode, StorageStats } from "@/lib/types";
-import { useLanguage } from "@/lib/LanguageContext";
-import { Shield, RefreshCw, Layers, Sparkles, MessageSquare } from "lucide-react";
+import { GALLERIES, getGalleryName } from "@/lib/constants";
+import { Shield, RefreshCw, Layers, Plus } from "lucide-react";
 
 export default function Home() {
-  const { t } = useLanguage();
   const [posts, setPosts] = useState<Post[]>([]);
   const [stats, setStats] = useState<StorageStats | null>(null);
   const [loading, setLoading] = useState(true);
@@ -19,15 +18,18 @@ export default function Home() {
   const [searchQuery, setSearchQuery] = useState("");
   const [sortMode, setSortMode] = useState<SortMode>("latest");
 
-  const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
-  const [selectedPostDetail, setSelectedPostDetail] = useState<Post | null>(null);
-
   const loadPosts = async () => {
     setLoading(true);
-    const [data, statsData] = await Promise.all([fetchPosts(), fetchStorageStats()]);
-    setPosts(data);
-    setStats(statsData);
-    setLoading(false);
+    try {
+      const data = await fetchPosts();
+      setPosts(data);
+      const storageData = await fetchStorageStats();
+      setStats(storageData);
+    } catch (err) {
+      console.warn("Failed to load posts", err);
+    } finally {
+      setLoading(false);
+    }
   };
 
   useEffect(() => {
@@ -74,39 +76,14 @@ export default function Home() {
           return bMedia - aMedia;
         }
         if (sortMode === "popular") {
-          // Sort by timestamp + file weight
-          return (b.files?.length || 0) - (a.files?.length || 0) || b.createdAt - a.createdAt;
+          return (b.likes || 0) - (a.likes || 0) || b.createdAt - a.createdAt;
         }
         // Default latest
         return b.createdAt - a.createdAt;
       });
   }, [posts, activeCategory, searchQuery, sortMode]);
 
-  const handlePostCreated = (newPost: Post) => {
-    setPosts((prev) => [newPost, ...prev]);
-    fetchStorageStats().then((s) => setStats(s)).catch(() => {});
-  };
-
-  const getGalleryTitle = () => {
-    switch (activeCategory) {
-      case "all":
-        return t("allFeed");
-      case "hot":
-        return t("hotFeed");
-      case "general":
-        return t("general");
-      case "crypto":
-        return t("crypto");
-      case "tech":
-        return t("tech");
-      case "news":
-        return t("news");
-      case "files":
-        return t("files");
-      default:
-        return t("allFeed");
-    }
-  };
+  const activeGalleryName = getGalleryName(activeCategory);
 
   return (
     <div className="min-h-screen bg-slate-950 text-slate-100 flex flex-col font-sans selection:bg-cyan-500 selection:text-slate-950">
@@ -121,69 +98,141 @@ export default function Home() {
         postCount={filteredPosts.length}
       />
 
-      {/* Main Board Layout Container */}
-      <main className="flex-1 max-w-6xl w-full mx-auto px-4 py-6 space-y-6">
-        {/* Hero Banner / Gallery Header */}
-        <div className="rounded-md bg-slate-900/80 border border-slate-800/80 p-4 md:p-5 flex items-center justify-between gap-4">
-          <div className="flex items-center space-x-2.5">
-            <span className="w-2.5 h-2.5 rounded-full bg-cyan-400"></span>
-            <h2 className="text-xl md:text-2xl font-bold tracking-tight text-white font-mono">
-              {getGalleryTitle()}
-            </h2>
+      {/* Main Layout Container: Left Sidebar + Right Feed */}
+      <main className="flex-1 max-w-6xl w-full mx-auto px-4 py-6 flex flex-col md:flex-row gap-6">
+        {/* Left Sidebar: DCInside Style Gallery List */}
+        <aside className="w-full md:w-60 flex-shrink-0 space-y-4 font-sans">
+          <div className="bg-slate-900/80 border border-slate-800 rounded-md p-3.5 shadow-md space-y-3">
+            <div className="flex items-center justify-between border-b border-slate-800 pb-2">
+              <h3 className="text-xs font-bold text-slate-300 font-mono flex items-center space-x-1.5 uppercase tracking-wider">
+                <Layers className="w-4 h-4 text-cyan-400" />
+                <span>갤러리 목록</span>
+              </h3>
+              <span className="text-[10px] font-mono text-slate-500">DC Style</span>
+            </div>
+
+            {/* Gallery Item Buttons */}
+            <div className="space-y-1">
+              {GALLERIES.map((g) => {
+                const isSelected = activeCategory === g.id;
+                return (
+                  <button
+                    key={g.id}
+                    onClick={() => setActiveCategory(g.id)}
+                    className={`w-full text-left px-3 py-2 rounded text-xs font-medium flex items-center justify-between transition-all cursor-pointer ${
+                      isSelected
+                        ? "bg-cyan-500/20 text-cyan-300 border border-cyan-500/40 font-bold shadow-sm"
+                        : "text-slate-400 hover:text-slate-200 hover:bg-slate-800/60 border border-transparent"
+                    }`}
+                  >
+                    <div className="flex items-center space-x-2 truncate">
+                      <span>{g.icon}</span>
+                      <span className="truncate">{g.name}</span>
+                    </div>
+                    <span className={`text-[10px] font-mono px-1.5 py-0.5 rounded ${
+                      isSelected ? "bg-cyan-500 text-slate-950 font-bold" : "bg-slate-950 text-slate-500"
+                    }`}>
+                      {g.shortName}
+                    </span>
+                  </button>
+                );
+              })}
+            </div>
           </div>
+        </aside>
 
-          <button
-            onClick={loadPosts}
-            disabled={loading}
-            className="flex items-center space-x-1.5 px-3 py-1.5 text-xs font-mono rounded-md bg-slate-950 border border-slate-800 hover:border-cyan-500/40 text-slate-300 hover:text-white transition-all cursor-pointer"
-            title="Refresh feed"
-          >
-            <RefreshCw className={`w-3.5 h-3.5 ${loading ? "animate-spin text-cyan-400" : ""}`} />
-            <span>Refresh</span>
-          </button>
-        </div>
+        {/* Right Main Feed Area */}
+        <section className="flex-1 space-y-4 min-w-0">
+          {/* Gallery Header Bar & Sort Options */}
+          <div className="rounded-md bg-slate-900/80 border border-slate-800 p-4 flex flex-wrap items-center justify-between gap-3 shadow-md">
+            <div className="flex items-center space-x-2.5">
+              <span className="w-2.5 h-2.5 rounded-full bg-cyan-400"></span>
+              <h2 className="text-lg md:text-xl font-bold tracking-tight text-white">
+                {activeGalleryName}
+              </h2>
+            </div>
 
-        {/* Post Grid Feed */}
-        {loading ? (
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            {[1, 2, 3, 4].map((i) => (
-              <div
-                key={i}
-                className="h-44 bg-slate-900/40 border border-slate-800/60 rounded-md p-5 animate-pulse flex flex-col justify-between"
-              >
-                <div className="space-y-3">
-                  <div className="h-4 bg-slate-800 rounded-sm w-1/3"></div>
-                  <div className="h-5 bg-slate-800/80 rounded-sm w-3/4"></div>
-                  <div className="h-3 bg-slate-800/60 rounded-sm w-full"></div>
-                </div>
-                <div className="h-4 bg-slate-800/50 rounded-sm w-1/4"></div>
+            <div className="flex items-center space-x-3">
+              {/* Sort mode buttons */}
+              <div className="flex items-center space-x-1 bg-slate-950 p-1 rounded border border-slate-800 text-xs font-mono">
+                <button
+                  onClick={() => setSortMode("latest")}
+                  className={`px-2.5 py-1 rounded transition-colors cursor-pointer ${
+                    sortMode === "latest" ? "bg-cyan-500 text-slate-950 font-bold" : "text-slate-400 hover:text-white"
+                  }`}
+                >
+                  최신순 ({filteredPosts.length})
+                </button>
+                <button
+                  onClick={() => setSortMode("popular")}
+                  className={`px-2.5 py-1 rounded transition-colors cursor-pointer ${
+                    sortMode === "popular" ? "bg-cyan-500 text-slate-950 font-bold" : "text-slate-400 hover:text-white"
+                  }`}
+                >
+                  인기순
+                </button>
+                <button
+                  onClick={() => setSortMode("media")}
+                  className={`px-2.5 py-1 rounded transition-colors cursor-pointer ${
+                    sortMode === "media" ? "bg-cyan-500 text-slate-950 font-bold" : "text-slate-400 hover:text-white"
+                  }`}
+                >
+                  미디어순
+                </button>
               </div>
-            ))}
+
+              {/* Refresh button */}
+              <button
+                onClick={loadPosts}
+                disabled={loading}
+                className="p-2 text-xs rounded bg-slate-950 border border-slate-800 hover:border-cyan-500/40 text-slate-300 hover:text-white transition-all cursor-pointer"
+                title="새로고침"
+              >
+                <RefreshCw className={`w-3.5 h-3.5 ${loading ? "animate-spin text-cyan-400" : ""}`} />
+              </button>
+            </div>
           </div>
-        ) : filteredPosts.length === 0 ? (
-          <div className="text-center py-16 px-4 rounded-md bg-slate-900/40 border border-slate-800/60 space-y-3">
-            <Layers className="w-10 h-10 mx-auto text-slate-600 animate-bounce" />
-            <h3 className="text-base font-bold text-slate-300 font-mono">No Posts Found</h3>
-            <p className="text-xs text-slate-500 max-w-sm mx-auto">
-              No anonymous posts match your current filter or search criteria. Be the first to create one!
-            </p>
-            <Link
-              href="/posts/new"
-              className="mt-2 px-4 py-2 text-xs font-mono font-bold rounded-md bg-cyan-500 hover:bg-cyan-400 text-slate-950 transition-all shadow-md inline-flex items-center space-x-1.5 cursor-pointer"
-            >
-              <span>+ Create First Post</span>
-            </Link>
-          </div>
-        ) : (
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            {filteredPosts.map((post) => (
-              <PostCard
-                key={post.id}
-                post={post}
-              />
-            ))}
-          </div>
-        )}
+
+          {/* Post Feed List */}
+          {loading ? (
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              {[1, 2, 3, 4].map((i) => (
+                <div
+                  key={i}
+                  className="h-44 bg-slate-900/40 border border-slate-800/60 rounded p-5 animate-pulse flex flex-col justify-between"
+                >
+                  <div className="space-y-3">
+                    <div className="h-4 bg-slate-800 rounded w-1/3"></div>
+                    <div className="h-5 bg-slate-800/80 rounded w-3/4"></div>
+                    <div className="h-3 bg-slate-800/60 rounded w-full"></div>
+                  </div>
+                  <div className="h-4 bg-slate-800/50 rounded w-1/4"></div>
+                </div>
+              ))}
+            </div>
+          ) : filteredPosts.length === 0 ? (
+            <div className="text-center py-16 px-4 rounded-md bg-slate-900/40 border border-slate-800/60 space-y-3">
+              <Layers className="w-10 h-10 mx-auto text-slate-600 animate-bounce" />
+              <h3 className="text-base font-bold text-slate-300 font-sans">게시물이 없습니다</h3>
+              <p className="text-xs text-slate-500 max-w-sm mx-auto">
+                조건에 맞는 게시물이 없습니다. 첫 번째 글을 등록해보세요!
+              </p>
+              <Link
+                href="/posts/new"
+                className="mt-2 px-4 py-2 text-xs font-bold rounded-md bg-cyan-500 hover:bg-cyan-400 text-slate-950 transition-all shadow-md inline-flex items-center space-x-1.5 cursor-pointer"
+              >
+                <Plus className="w-4 h-4" />
+                <span>+ 첫 글 작성하기</span>
+              </Link>
+            </div>
+          ) : (
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              {filteredPosts.map((post) => (
+                <PostCard key={post.id} post={post} />
+              ))}
+            </div>
+          )}
+        </section>
       </main>
 
       {/* Footer */}
@@ -191,7 +240,7 @@ export default function Home() {
         <div className="max-w-6xl mx-auto px-4 flex flex-wrap items-center justify-between gap-4">
           <div className="flex items-center space-x-2 text-slate-400">
             <Shield className="w-4 h-4 text-cyan-400" />
-            <span>FALSECRYPT ANONYMOUS SYSTEM • ZERO LOGS</span>
+            <span>FCINSIDE 익명 시스템 • 로그 없음</span>
           </div>
 
           <StorageBar posts={posts} stats={stats} />
