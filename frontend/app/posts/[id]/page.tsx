@@ -311,68 +311,28 @@ export default function PostDetailPage({ params }: PageProps) {
             </div>
           )}
 
-          {/* Attachments & Gallery Section */}
+          {/* Attachments Section */}
           {post.files && post.files.length > 0 && (
-            <div className="space-y-4 pt-4 border-t border-slate-800/80">
+            <div className="space-y-3 pt-4 border-t border-slate-800/80">
               <h3 className="text-sm font-bold text-slate-300 uppercase tracking-wider flex items-center space-x-2 font-sans">
                 <Paperclip className="w-4.5 h-4.5 text-cyan-400" />
                 <span>첨부파일 ({post.files.length})</span>
               </h3>
 
-              {/* Media Grid */}
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                {post.files.map((file, idx) => {
-                  const url = getFileUrl(file);
-                  const isImg = isImageFile(file);
-                  const isVid = isVideoFile(file);
-
-                  if (isImg) {
-                    return (
-                      <div
-                        key={idx}
-                        onClick={() => setSelectedImage(url)}
-                        className="group relative aspect-video bg-slate-950 border border-slate-800 rounded-md overflow-hidden cursor-pointer hover:border-cyan-500/60 transition-colors shadow-md"
-                      >
-                        <img
-                          src={url}
-                          alt="Post attachment"
-                          className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
-                        />
-                        <div className="absolute inset-0 bg-slate-950/50 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center text-white text-xs font-mono font-medium gap-2 backdrop-blur-xs">
-                          <Eye className="w-5 h-5" />
-                          <span>Expand Image</span>
-                        </div>
-                      </div>
-                    );
-                  } else if (isVid) {
-                    return (
-                      <div key={idx} className="aspect-video bg-slate-950 border border-slate-800 rounded-md overflow-hidden shadow-md">
-                        <video controls src={url} className="w-full h-full object-contain" />
-                      </div>
-                    );
-                  }
-                  return null;
-                })}
-              </div>
-
-              {/* Download Buttons List */}
-              <div className="pt-2">
-                <h4 className="text-xs font-mono font-medium text-slate-400 mb-2">Direct Downloads:</h4>
-                <div className="flex flex-wrap gap-2.5">
-                  {post.files.map((file, idx) => (
-                    <a
-                      key={idx}
-                      href={getFileUrl(file)}
-                      download={getCleanFileName(file)}
-                      target="_blank"
-                      rel="noreferrer"
-                      className="flex items-center space-x-2.5 px-4 py-2.5 text-xs font-mono rounded-md bg-slate-950 border border-slate-800 text-cyan-300 hover:bg-slate-900 hover:border-cyan-500/50 transition-all shadow-sm cursor-pointer"
-                    >
-                      <Download className="w-4 h-4 text-cyan-400" />
-                      <span className="font-semibold">{getCleanFileName(file)}</span>
-                    </a>
-                  ))}
-                </div>
+              <div className="flex flex-wrap gap-2.5 pt-1">
+                {post.files.map((file, idx) => (
+                  <a
+                    key={idx}
+                    href={getFileUrl(file)}
+                    download={getCleanFileName(file)}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="flex items-center space-x-2.5 px-4 py-2.5 text-xs font-mono rounded-md bg-slate-950 border border-slate-800 text-cyan-300 hover:bg-slate-900 hover:border-cyan-500/50 transition-all shadow-sm cursor-pointer"
+                  >
+                    <Download className="w-4 h-4 text-cyan-400 shrink-0" />
+                    <span className="font-semibold truncate max-w-[280px]">{getCleanFileName(file)}</span>
+                  </a>
+                ))}
               </div>
             </div>
           )}
