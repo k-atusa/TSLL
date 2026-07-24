@@ -15,6 +15,7 @@ import {
   Send,
   Shield,
   ThumbsUp,
+  ThumbsDown,
   MessageSquare,
 } from "lucide-react";
 import { Header } from "@/components/Header";
@@ -28,6 +29,7 @@ import {
   isVideoFile,
   getCleanFileName,
   likePost,
+  dislikePost,
   addComment,
 } from "@/lib/api";
 import { BoardCategory, Comment, Post } from "@/lib/types";
@@ -49,7 +51,9 @@ export default function PostDetailPage({ params }: PageProps) {
 
   // Real reaction likes state
   const [likesCount, setLikesCount] = useState(0);
+  const [dislikesCount, setDislikesCount] = useState(0);
   const [hasLiked, setHasLiked] = useState(false);
+  const [hasDisliked, setHasDisliked] = useState(false);
 
   // Real comments state
   const [comments, setComments] = useState<Comment[]>([]);
@@ -63,6 +67,7 @@ export default function PostDetailPage({ params }: PageProps) {
       if (data) {
         setPost(data);
         setLikesCount(data.likes || 0);
+        setDislikesCount(data.dislikes || 0);
         setComments(data.comments || []);
       }
       setLoading(false);
@@ -87,6 +92,20 @@ export default function PostDetailPage({ params }: PageProps) {
       }
     } catch (err) {
       console.warn("Error liking post", err);
+    }
+  };
+
+  const handleDislike = async () => {
+    if (hasDisliked || !post) return;
+    setHasDisliked(true);
+    setDislikesCount((prev) => prev + 1);
+    try {
+      const updated = await dislikePost(post.id);
+      if (updated && typeof updated.dislikes === "number") {
+        setDislikesCount(updated.dislikes);
+      }
+    } catch (err) {
+      console.warn("Error disliking post", err);
     }
   };
 
@@ -349,7 +368,7 @@ export default function PostDetailPage({ params }: PageProps) {
           )}
 
           {/* Post Reactions / Likes Bar */}
-          <div className="pt-6 border-t border-slate-800/80 flex items-center justify-between">
+          <div className="pt-6 border-t border-slate-800/80 flex items-center space-x-3">
             <button
               onClick={handleLike}
               className={`flex items-center space-x-2 px-4 py-2 rounded-md border text-xs md:text-sm font-mono transition-all cursor-pointer ${
@@ -360,6 +379,18 @@ export default function PostDetailPage({ params }: PageProps) {
             >
               <ThumbsUp className={`w-4 h-4 ${hasLiked ? "text-cyan-400 fill-cyan-400/20" : "text-cyan-400"}`} />
               <span>Recommend ({likesCount})</span>
+            </button>
+
+            <button
+              onClick={handleDislike}
+              className={`flex items-center space-x-2 px-4 py-2 rounded-md border text-xs md:text-sm font-mono transition-all cursor-pointer ${
+                hasDisliked
+                  ? "bg-rose-500/20 text-rose-300 border-rose-500/50 font-bold"
+                  : "bg-slate-950 text-slate-300 border-slate-800 hover:text-white hover:border-slate-700"
+              }`}
+            >
+              <ThumbsDown className={`w-4 h-4 ${hasDisliked ? "text-rose-400 fill-rose-400/20" : "text-rose-400"}`} />
+              <span>Dislike ({dislikesCount})</span>
             </button>
           </div>
         </article>

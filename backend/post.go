@@ -29,6 +29,7 @@ type Post struct {
 	Files     []string  `json:"files"`
 	CreatedAt int64     `json:"createdAt"`
 	Likes     int       `json:"likes"`
+	Dislikes  int       `json:"dislikes"`
 	Comments  []Comment `json:"comments"`
 }
 
@@ -336,6 +337,39 @@ func handleCreateComment(w http.ResponseWriter, r *http.Request) {
 	}
 
 	p.Comments = append(p.Comments, comment)
+	updatedData, _ := json.Marshal(p)
+	os.WriteFile(postPath, updatedData, 0644)
+
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(p)
+}
+
+// handle post dislike
+func handleDislikePost(w http.ResponseWriter, r *http.Request) {
+	mu.Lock()
+	defer mu.Unlock()
+
+	id := strings.TrimPrefix(r.URL.Path, "/api/com/posts/")
+	id = strings.TrimSuffix(id, "/dislike")
+	if id == "" || filepath.Base(id) != id {
+		http.Error(w, "Invalid post ID", http.StatusBadRequest)
+		return
+	}
+
+	postPath := filepath.Join(config.PostDir, "posts", id+".json")
+	data, err := os.ReadFile(postPath)
+	if err != nil {
+		http.Error(w, "Post not found", http.StatusNotFound)
+		return
+	}
+
+	var p Post
+	if err := json.Unmarshal(data, &p); err != nil {
+		http.Error(w, "Corrupt post data", http.StatusInternalServerError)
+		return
+	}
+
+	p.Dislikes++
 	updatedData, _ := json.Marshal(p)
 	os.WriteFile(postPath, updatedData, 0644)
 

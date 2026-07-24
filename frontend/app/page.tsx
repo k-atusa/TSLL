@@ -39,15 +39,18 @@ export default function Home() {
       .filter((post) => {
         // Category Filter
         if (activeCategory !== "all") {
-          const catPattern = new RegExp(`\\[${activeCategory}\\]`, "i");
-          if (activeCategory === "files") {
+          if (activeCategory === "hot") {
+            if ((post.likes || 0) < 10) return false;
+          } else if (activeCategory === "files") {
             if (!post.files || post.files.length === 0) return false;
-          } else if (!catPattern.test(post.title)) {
-            // If category prefix is missing, include in general if activeCategory == 'general'
-            if (activeCategory === "general" && !post.title.startsWith("[")) {
-              // match
-            } else {
-              return false;
+          } else {
+            const catPattern = new RegExp(`\\[${activeCategory}\\]`, "i");
+            if (!catPattern.test(post.title)) {
+              if (activeCategory === "general" && !post.title.startsWith("[")) {
+                // match
+              } else {
+                return false;
+              }
             }
           }
         }

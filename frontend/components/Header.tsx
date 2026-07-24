@@ -1,7 +1,7 @@
 "use client";
 
 import React from "react";
-import { Shield, Plus, Search, Terminal, Newspaper, Cpu, FileCode2, Lock, Radio } from "lucide-react";
+import { Shield, Plus, Search, Terminal, Newspaper, Cpu, FileCode2, Lock, Radio, Flame } from "lucide-react";
 import { BoardCategory, SortMode } from "@/lib/types";
 
 interface HeaderProps {
@@ -17,6 +17,7 @@ interface HeaderProps {
 
 const CATEGORIES: { id: BoardCategory; label: string; icon: React.ReactNode }[] = [
   { id: "all", label: "All Feed", icon: <Terminal className="w-3.5 h-3.5" /> },
+  { id: "hot", label: "Hot 🔥", icon: <Flame className="w-3.5 h-3.5 text-amber-400" /> },
   { id: "general", label: "General", icon: <Radio className="w-3.5 h-3.5" /> },
   { id: "crypto", label: "Crypto / ZK", icon: <Lock className="w-3.5 h-3.5" /> },
   { id: "tech", label: "Tech / Dev", icon: <Cpu className="w-3.5 h-3.5" /> },

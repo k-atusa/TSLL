@@ -158,6 +158,15 @@ export async function likePost(id: string): Promise<Post> {
   return await res.json();
 }
 
+// API: Dislike / Downvote post
+export async function dislikePost(id: string): Promise<Post> {
+  const res = await fetch(`${API_BASE}/api/com/posts/${id}/dislike`, {
+    method: "POST",
+  });
+  if (!res.ok) throw new Error("Failed to dislike post");
+  return await res.json();
+}
+
 // API: Add comment to post
 export async function addComment(id: string, body: string): Promise<Post> {
   const res = await fetch(`${API_BASE}/api/com/posts/${id}/comments`, {

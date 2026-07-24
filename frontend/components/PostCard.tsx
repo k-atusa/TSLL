@@ -4,6 +4,7 @@ import React, { useState } from "react";
 import {
   Flame,
   ThumbsUp,
+  ThumbsDown,
   Shield,
   Share2,
   FileText,
@@ -23,6 +24,7 @@ import {
   isVideoFile,
   getCleanFileName,
   likePost,
+  dislikePost,
 } from "@/lib/api";
 
 interface PostCardProps {
@@ -32,7 +34,9 @@ interface PostCardProps {
 
 export const PostCard: React.FC<PostCardProps> = ({ post }) => {
   const [likesCount, setLikesCount] = useState(post.likes || 0);
+  const [dislikesCount, setDislikesCount] = useState(post.dislikes || 0);
   const [hasUpvoted, setHasUpvoted] = useState(false);
+  const [hasDownvoted, setHasDownvoted] = useState(false);
   const [copied, setCopied] = useState(false);
 
   const anonInfo = generateAnonId(post.id);
@@ -59,6 +63,22 @@ export const PostCard: React.FC<PostCardProps> = ({ post }) => {
       }
     } catch (err) {
       console.warn("Error sending upvote to server", err);
+    }
+  };
+
+  const handleDownvote = async (e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    if (hasDownvoted) return;
+    setHasDownvoted(true);
+    setDislikesCount((prev) => prev + 1);
+    try {
+      const updated = await dislikePost(post.id);
+      if (updated && typeof updated.dislikes === "number") {
+        setDislikesCount(updated.dislikes);
+      }
+    } catch (err) {
+      console.warn("Error sending dislike to server", err);
     }
   };
 
@@ -169,6 +189,18 @@ export const PostCard: React.FC<PostCardProps> = ({ post }) => {
           >
             <ThumbsUp className={`w-3.5 h-3.5 ${hasUpvoted ? "text-cyan-400 fill-cyan-400/20" : ""}`} />
             <span>{likesCount}</span>
+          </button>
+
+          <button
+            onClick={handleDownvote}
+            className={`flex items-center space-x-1.5 px-2.5 py-1 rounded-sm border transition-all ${
+              hasDownvoted
+                ? "bg-rose-500/20 text-rose-300 border-rose-500/40 font-bold"
+                : "bg-slate-950/60 text-slate-400 border-slate-800 hover:text-slate-200 hover:border-slate-700"
+            }`}
+          >
+            <ThumbsDown className={`w-3.5 h-3.5 ${hasDownvoted ? "text-rose-400 fill-rose-400/20" : ""}`} />
+            <span>{dislikesCount}</span>
           </button>
 
           <span className="flex items-center space-x-1 px-2.5 py-1 rounded-sm border border-slate-800 bg-slate-950/60 text-slate-400 font-mono">

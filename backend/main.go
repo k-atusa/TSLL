@@ -318,6 +318,8 @@ func main() {
 		}
 		if strings.HasSuffix(r.URL.Path, "/like") && r.Method == http.MethodPost {
 			handleLikePost(w, r)
+		} else if strings.HasSuffix(r.URL.Path, "/dislike") && r.Method == http.MethodPost {
+			handleDislikePost(w, r)
 		} else if strings.HasSuffix(r.URL.Path, "/comments") && r.Method == http.MethodPost {
 			handleCreateComment(w, r)
 		} else if r.Method == http.MethodGet {

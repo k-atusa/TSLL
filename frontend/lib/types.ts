@@ -12,6 +12,7 @@ export interface Post {
   files: string[];
   createdAt: number; // nanoseconds timestamp
   likes?: number;
+  dislikes?: number;
   comments?: Comment[];
 }
 
@@ -22,6 +23,6 @@ export interface StorageStats {
   fileCount: number;
 }
 
-export type BoardCategory = 'all' | 'general' | 'crypto' | 'tech' | 'news' | 'files';
+export type BoardCategory = 'all' | 'hot' | 'general' | 'crypto' | 'tech' | 'news' | 'files';
 
 export type SortMode = 'latest' | 'popular' | 'media';
