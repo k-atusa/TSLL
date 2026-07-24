@@ -60,10 +60,6 @@ export const Header: React.FC<HeaderProps> = ({
                 v2.0-LIVE
               </span>
             </div>
-            <p className="text-xs text-slate-400 flex items-center gap-1.5">
-              <span className="inline-block w-1.5 h-1.5 rounded-full bg-emerald-400"></span>
-              Encrypted Ephemeral Bulletin • No Auth Required
-            </p>
           </div>
         </div>
 

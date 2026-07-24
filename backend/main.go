@@ -11,6 +11,7 @@ import (
 	"os"
 	"path/filepath"
 	"strconv"
+	"strings"
 
 	"github.com/k-atusa/USAG-Lib/Bencrypt"
 	"github.com/taewook427/USAG-KOX/FalseCrypt"
@@ -315,7 +316,11 @@ func main() {
 		if enableCORS(w, r) {
 			return
 		}
-		if r.Method == http.MethodGet {
+		if strings.HasSuffix(r.URL.Path, "/like") && r.Method == http.MethodPost {
+			handleLikePost(w, r)
+		} else if strings.HasSuffix(r.URL.Path, "/comments") && r.Method == http.MethodPost {
+			handleCreateComment(w, r)
+		} else if r.Method == http.MethodGet {
 			handleGetPostDetail(w, r)
 		} else {
 			http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)

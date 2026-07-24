@@ -1,9 +1,18 @@
+export interface Comment {
+  id: string;
+  handle: string;
+  body: string;
+  createdAt: number;
+}
+
 export interface Post {
   id: string;
   title: string;
   body: string;
   files: string[];
   createdAt: number; // nanoseconds timestamp
+  likes?: number;
+  comments?: Comment[];
 }
 
 export interface StorageStats {
@@ -16,10 +25,3 @@ export interface StorageStats {
 export type BoardCategory = 'all' | 'general' | 'crypto' | 'tech' | 'lounge' | 'files';
 
 export type SortMode = 'latest' | 'popular' | 'media';
-
-export interface ReactionState {
-  fire: number;
-  upvote: number;
-  shield: number;
-  bookmark: boolean;
-}

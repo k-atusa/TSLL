@@ -149,6 +149,28 @@ export async function createPost(title: string, body: string, files: File[]): Pr
   return await res.json();
 }
 
+// API: Like / Upvote post
+export async function likePost(id: string): Promise<Post> {
+  const res = await fetch(`${API_BASE}/api/com/posts/${id}/like`, {
+    method: "POST",
+  });
+  if (!res.ok) throw new Error("Failed to like post");
+  return await res.json();
+}
+
+// API: Add comment to post
+export async function addComment(id: string, body: string): Promise<Post> {
+  const res = await fetch(`${API_BASE}/api/com/posts/${id}/comments`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({ body }),
+  });
+  if (!res.ok) throw new Error("Failed to post comment");
+  return await res.json();
+}
+
 // Demo fallback data if Go backend is not running yet during development
 function getFallbackPosts(): Post[] {
   const now = Date.now() * 1_000_000;

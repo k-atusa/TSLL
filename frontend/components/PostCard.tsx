@@ -22,6 +22,7 @@ import {
   isImageFile,
   isVideoFile,
   getCleanFileName,
+  likePost,
 } from "@/lib/api";
 
 interface PostCardProps {
@@ -29,16 +30,9 @@ interface PostCardProps {
   onOpenDetail?: (post: Post) => void;
 }
 
-export const PostCard: React.FC<PostCardProps> = ({ post, onOpenDetail }) => {
-  const [reactions, setReactions] = useState({
-    upvote: Math.floor(parseInt(post.id.slice(-3) || "12") % 47) + 2,
-    fire: Math.floor(parseInt(post.id.slice(-2) || "5") % 19),
-    shield: Math.floor(parseInt(post.id.slice(-4) || "8") % 11),
-  });
-
+export const PostCard: React.FC<PostCardProps> = ({ post }) => {
+  const [likesCount, setLikesCount] = useState(post.likes || 0);
   const [hasUpvoted, setHasUpvoted] = useState(false);
-  const [hasFired, setHasFired] = useState(false);
-  const [hasShielded, setHasShielded] = useState(false);
   const [copied, setCopied] = useState(false);
 
   const anonInfo = generateAnonId(post.id);
@@ -52,39 +46,19 @@ export const PostCard: React.FC<PostCardProps> = ({ post, onOpenDetail }) => {
   const categoryTag = tagMatch ? tagMatch[1] : null;
   const cleanTitle = tagMatch ? post.title.replace(/^\[.*?\]\s*/, "") : post.title;
 
-  const handleUpvote = (e: React.MouseEvent) => {
+  const handleUpvote = async (e: React.MouseEvent) => {
     e.preventDefault();
     e.stopPropagation();
-    if (hasUpvoted) {
-      setReactions((r) => ({ ...r, upvote: r.upvote - 1 }));
-      setHasUpvoted(false);
-    } else {
-      setReactions((r) => ({ ...r, upvote: r.upvote + 1 }));
-      setHasUpvoted(true);
-    }
-  };
-
-  const handleFire = (e: React.MouseEvent) => {
-    e.preventDefault();
-    e.stopPropagation();
-    if (hasFired) {
-      setReactions((r) => ({ ...r, fire: r.fire - 1 }));
-      setHasFired(false);
-    } else {
-      setReactions((r) => ({ ...r, fire: r.fire + 1 }));
-      setHasFired(true);
-    }
-  };
-
-  const handleShield = (e: React.MouseEvent) => {
-    e.preventDefault();
-    e.stopPropagation();
-    if (hasShielded) {
-      setReactions((r) => ({ ...r, shield: r.shield - 1 }));
-      setHasShielded(false);
-    } else {
-      setReactions((r) => ({ ...r, shield: r.shield + 1 }));
-      setHasShielded(true);
+    if (hasUpvoted) return;
+    setHasUpvoted(true);
+    setLikesCount((prev) => prev + 1);
+    try {
+      const updated = await likePost(post.id);
+      if (updated && typeof updated.likes === "number") {
+        setLikesCount(updated.likes);
+      }
+    } catch (err) {
+      console.warn("Error sending upvote to server", err);
     }
   };
 
@@ -125,13 +99,6 @@ export const PostCard: React.FC<PostCardProps> = ({ post, onOpenDetail }) => {
             </div>
             <span className="text-[11px] text-slate-400 font-mono">{formattedTime}</span>
           </div>
-        </div>
-
-        {/* Post ID & Options */}
-        <div className="flex items-center space-x-2">
-          <span className="text-[10px] font-mono text-slate-400 bg-slate-950 px-2 py-0.5 rounded-sm border border-slate-800">
-            ID: {post.id.slice(-6)}
-          </span>
         </div>
       </div>
 
@@ -191,7 +158,7 @@ export const PostCard: React.FC<PostCardProps> = ({ post, onOpenDetail }) => {
 
       {/* Card Footer / Reactions bar */}
       <div className="mt-4 pt-3 border-t border-slate-800/70 flex flex-wrap items-center justify-between text-xs text-slate-400 gap-2">
-        <div className="flex items-center space-x-1.5">
+        <div className="flex items-center space-x-2">
           <button
             onClick={handleUpvote}
             className={`flex items-center space-x-1.5 px-2.5 py-1 rounded-sm border transition-all ${
@@ -201,32 +168,13 @@ export const PostCard: React.FC<PostCardProps> = ({ post, onOpenDetail }) => {
             }`}
           >
             <ThumbsUp className={`w-3.5 h-3.5 ${hasUpvoted ? "text-cyan-400 fill-cyan-400/20" : ""}`} />
-            <span>{reactions.upvote}</span>
+            <span>{likesCount}</span>
           </button>
 
-          <button
-            onClick={handleFire}
-            className={`flex items-center space-x-1.5 px-2.5 py-1 rounded-sm border transition-all ${
-              hasFired
-                ? "bg-amber-500/20 text-amber-300 border-amber-500/40 font-bold"
-                : "bg-slate-950/60 text-slate-400 border-slate-800 hover:text-slate-200 hover:border-slate-700"
-            }`}
-          >
-            <Flame className={`w-3.5 h-3.5 ${hasFired ? "text-amber-400 fill-amber-400/20" : ""}`} />
-            <span>{reactions.fire}</span>
-          </button>
-
-          <button
-            onClick={handleShield}
-            className={`flex items-center space-x-1.5 px-2.5 py-1 rounded-sm border transition-all ${
-              hasShielded
-                ? "bg-purple-500/20 text-purple-300 border-purple-500/40 font-bold"
-                : "bg-slate-950/60 text-slate-400 border-slate-800 hover:text-slate-200 hover:border-slate-700"
-            }`}
-          >
-            <Shield className={`w-3.5 h-3.5 ${hasShielded ? "text-purple-400 fill-purple-400/20" : ""}`} />
-            <span>{reactions.shield}</span>
-          </button>
+          <span className="flex items-center space-x-1 px-2.5 py-1 rounded-sm border border-slate-800 bg-slate-950/60 text-slate-400 font-mono">
+            <MessageSquare className="w-3.5 h-3.5 text-slate-500" />
+            <span>{post.comments?.length || 0}</span>
+          </span>
         </div>
 
         <div className="flex items-center space-x-2">

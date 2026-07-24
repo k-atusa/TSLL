@@ -15,14 +15,22 @@ import {
   Send,
   Shield,
   ThumbsUp,
-  Flame,
   MessageSquare,
-  Sparkles,
 } from "lucide-react";
 import { Header } from "@/components/Header";
 import { CreatePostModal } from "@/components/CreatePostModal";
-import { fetchPostDetail, formatTimeAgo, generateAnonId, getFileUrl, isImageFile, isVideoFile, getCleanFileName } from "@/lib/api";
-import { BoardCategory, Post, SortMode } from "@/lib/types";
+import {
+  fetchPostDetail,
+  formatTimeAgo,
+  generateAnonId,
+  getFileUrl,
+  isImageFile,
+  isVideoFile,
+  getCleanFileName,
+  likePost,
+  addComment,
+} from "@/lib/api";
+import { BoardCategory, Comment, Post } from "@/lib/types";
 
 interface PageProps {
   params: Promise<{ id: string }>;
@@ -39,32 +47,14 @@ export default function PostDetailPage({ params }: PageProps) {
   const [selectedImage, setSelectedImage] = useState<string | null>(null);
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
 
-  // Reaction counters
-  const [reactions, setReactions] = useState({ upvote: 14, fire: 6, shield: 3 });
-  const [hasUpvoted, setHasUpvoted] = useState(false);
-  const [hasFired, setHasFired] = useState(false);
-  const [hasShielded, setHasShielded] = useState(false);
+  // Real reaction likes state
+  const [likesCount, setLikesCount] = useState(0);
+  const [hasLiked, setHasLiked] = useState(false);
 
-  // Comment state
-  const [comments, setComments] = useState<
-    { id: string; handle: string; body: string; time: string; color: string }[]
-  >([
-    {
-      id: "c1",
-      handle: "Anon#9f2a41",
-      body: "Thanks for sharing this post. Verified content and attachments locally.",
-      time: "15m ago",
-      color: "from-cyan-500 to-blue-600",
-    },
-    {
-      id: "c2",
-      handle: "Anon#4b8e12",
-      body: "Chunk checksums match perfectly. Readable via FalseCrypt network node.",
-      time: "6m ago",
-      color: "from-purple-500 to-indigo-600",
-    },
-  ]);
+  // Real comments state
+  const [comments, setComments] = useState<Comment[]>([]);
   const [newCommentBody, setNewCommentBody] = useState("");
+  const [isSubmittingComment, setIsSubmittingComment] = useState(false);
 
   useEffect(() => {
     async function loadData() {
@@ -72,22 +62,8 @@ export default function PostDetailPage({ params }: PageProps) {
       const data = await fetchPostDetail(postId);
       if (data) {
         setPost(data);
-      } else {
-        // Fallback demo post if API is offline
-        setPost({
-          id: postId,
-          title: "[Crypto] Zero-Knowledge Proofs & Ephemeral Chunk Storage Analysis",
-          body: `Here is a detailed breakdown of zero-knowledge proof applications in decentralized anonymous networks.
-
-Key Features:
-1. Client-side encryption ensures no plaintext leak before upload.
-2. Chunk bloom filters maintain integrity while preserving full zero-trace ephemerality.
-3. Automatic capacity-based garbage collection (FIFO) guarantees predictable storage bounds.
-
-Feel free to download the attachments below or test uploading your own encrypted payloads.`,
-          files: [],
-          createdAt: Date.now() * 1_000_000 - 1000000 * 60 * 20,
-        });
+        setLikesCount(data.likes || 0);
+        setComments(data.comments || []);
       }
       setLoading(false);
     }
@@ -100,22 +76,49 @@ Feel free to download the attachments below or test uploading your own encrypted
     setTimeout(() => setCopied(false), 2000);
   };
 
-  const handleAddComment = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!newCommentBody.trim()) return;
+  const handleLike = async () => {
+    if (hasLiked || !post) return;
+    setHasLiked(true);
+    setLikesCount((prev) => prev + 1);
+    try {
+      const updated = await likePost(post.id);
+      if (updated && typeof updated.likes === "number") {
+        setLikesCount(updated.likes);
+      }
+    } catch (err) {
+      console.warn("Error liking post", err);
+    }
+  };
 
-    const myAnon = generateAnonId(Date.now().toString());
-    setComments((prev) => [
-      ...prev,
-      {
-        id: Date.now().toString(),
-        handle: myAnon.handle,
-        body: newCommentBody.trim(),
-        time: "Just now",
-        color: myAnon.color,
-      },
-    ]);
-    setNewCommentBody("");
+  const handleAddCommentSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!newCommentBody.trim() || !post || isSubmittingComment) return;
+
+    setIsSubmittingComment(true);
+    try {
+      const updatedPost = await addComment(post.id, newCommentBody.trim());
+      if (updatedPost && updatedPost.comments) {
+        setComments(updatedPost.comments);
+      } else {
+        // Fallback local append
+        const anon = generateAnonId(Date.now().toString());
+        setComments((prev) => [
+          ...prev,
+          {
+            id: Date.now().toString(),
+            handle: anon.handle,
+            body: newCommentBody.trim(),
+            createdAt: Date.now() * 1_000_000,
+          },
+        ]);
+      }
+      setNewCommentBody("");
+    } catch (err) {
+      console.error("Failed to post comment", err);
+      alert("Failed to send comment. Please try again.");
+    } finally {
+      setIsSubmittingComment(false);
+    }
   };
 
   if (loading) {
@@ -216,16 +219,11 @@ Feel free to download the attachments below or test uploading your own encrypted
             <span>Back to Feed</span>
           </Link>
 
-          <div className="flex items-center space-x-2 text-xs font-mono text-slate-400">
-            {categoryTag && (
-              <span className="px-2.5 py-1 rounded-sm bg-cyan-500/10 text-cyan-400 border border-cyan-500/30 font-semibold">
-                #{categoryTag}
-              </span>
-            )}
-            <span className="bg-slate-900 border border-slate-800 px-2.5 py-1 rounded-sm">
-              ID: {post.id.slice(-8)}
+          {categoryTag && (
+            <span className="px-2.5 py-1 rounded-sm bg-cyan-500/10 text-cyan-400 border border-cyan-500/30 font-mono text-xs font-semibold">
+              #{categoryTag}
             </span>
-          </div>
+          )}
         </div>
 
         {/* Post Card View Container */}
@@ -235,21 +233,16 @@ Feel free to download the attachments below or test uploading your own encrypted
             <div className="flex items-center space-x-3.5">
               {/* Tripcode Badge */}
               <div
-                className={`w-12 h-12 rounded-md bg-gradient-to-br ${anonInfo.color} flex items-center justify-center text-white text-base font-mono font-bold shadow-md`}
+                className={`w-11 h-11 rounded-md bg-gradient-to-br ${anonInfo.color} flex items-center justify-center text-white text-base font-mono font-bold shadow-md`}
               >
                 {anonInfo.handle.slice(5, 7).toUpperCase()}
               </div>
 
               <div>
-                <div className="flex items-center space-x-2">
-                  <span className="font-mono text-base font-bold text-white">
-                    {anonInfo.handle}
-                  </span>
-                  <span className="px-2 py-0.5 text-[11px] font-mono rounded-sm bg-cyan-500/10 text-cyan-400 border border-cyan-500/30">
-                    VERIFIED ANONYMOUS
-                  </span>
-                </div>
-                <div className="flex items-center space-x-2 text-xs font-mono text-slate-400 mt-1">
+                <span className="font-mono text-base font-bold text-white block">
+                  {anonInfo.handle}
+                </span>
+                <div className="flex items-center space-x-2 text-xs font-mono text-slate-400 mt-0.5">
                   <Clock className="w-3.5 h-3.5 text-slate-500" />
                   <span>{formattedTime}</span>
                   <span>•</span>
@@ -294,7 +287,7 @@ Feel free to download the attachments below or test uploading your own encrypted
             <div className="space-y-4 pt-4 border-t border-slate-800/80">
               <h3 className="text-sm font-mono font-bold text-slate-300 uppercase tracking-wider flex items-center space-x-2">
                 <Paperclip className="w-4.5 h-4.5 text-cyan-400" />
-                <span>ATTACHMENTS & MEDIA ({post.files.length})</span>
+                <span>ATTACHMENTS ({post.files.length})</span>
               </h3>
 
               {/* Media Grid */}
@@ -355,115 +348,78 @@ Feel free to download the attachments below or test uploading your own encrypted
             </div>
           )}
 
-          {/* Post Reactions Bar */}
-          <div className="pt-6 border-t border-slate-800/80 flex flex-wrap items-center justify-between gap-4">
-            <div className="flex items-center space-x-2">
-              <button
-                onClick={() => {
-                  setReactions((r) => ({ ...r, upvote: hasUpvoted ? r.upvote - 1 : r.upvote + 1 }));
-                  setHasUpvoted(!hasUpvoted);
-                }}
-                className={`flex items-center space-x-2 px-3.5 py-1.5 rounded-md border text-xs font-mono transition-all cursor-pointer ${
-                  hasUpvoted
-                    ? "bg-cyan-500/20 text-cyan-300 border-cyan-500/50 font-bold"
-                    : "bg-slate-950 text-slate-400 border-slate-800 hover:text-white"
-                }`}
-              >
-                <ThumbsUp className="w-4 h-4 text-cyan-400" />
-                <span>Upvote ({reactions.upvote})</span>
-              </button>
-
-              <button
-                onClick={() => {
-                  setReactions((r) => ({ ...r, fire: hasFired ? r.fire - 1 : r.fire + 1 }));
-                  setHasFired(!hasFired);
-                }}
-                className={`flex items-center space-x-2 px-3.5 py-1.5 rounded-md border text-xs font-mono transition-all cursor-pointer ${
-                  hasFired
-                    ? "bg-amber-500/20 text-amber-300 border-amber-500/50 font-bold"
-                    : "bg-slate-950 text-slate-400 border-slate-800 hover:text-white"
-                }`}
-              >
-                <Flame className="w-4 h-4 text-amber-400" />
-                <span>Hot ({reactions.fire})</span>
-              </button>
-
-              <button
-                onClick={() => {
-                  setReactions((r) => ({ ...r, shield: hasShielded ? r.shield - 1 : r.shield + 1 }));
-                  setHasShielded(!hasShielded);
-                }}
-                className={`flex items-center space-x-2 px-3.5 py-1.5 rounded-md border text-xs font-mono transition-all cursor-pointer ${
-                  hasShielded
-                    ? "bg-purple-500/20 text-purple-300 border-purple-500/50 font-bold"
-                    : "bg-slate-950 text-slate-400 border-slate-800 hover:text-white"
-                }`}
-              >
-                <Shield className="w-4 h-4 text-purple-400" />
-                <span>Shield ({reactions.shield})</span>
-              </button>
-            </div>
-
-            <span className="text-xs font-mono text-slate-500">
-              Ephemeral Bulletin • Zero Trace
-            </span>
+          {/* Post Reactions / Likes Bar */}
+          <div className="pt-6 border-t border-slate-800/80 flex items-center justify-between">
+            <button
+              onClick={handleLike}
+              className={`flex items-center space-x-2 px-4 py-2 rounded-md border text-xs md:text-sm font-mono transition-all cursor-pointer ${
+                hasLiked
+                  ? "bg-cyan-500/20 text-cyan-300 border-cyan-500/50 font-bold"
+                  : "bg-slate-950 text-slate-300 border-slate-800 hover:text-white hover:border-slate-700"
+              }`}
+            >
+              <ThumbsUp className={`w-4 h-4 ${hasLiked ? "text-cyan-400 fill-cyan-400/20" : "text-cyan-400"}`} />
+              <span>Recommend ({likesCount})</span>
+            </button>
           </div>
         </article>
 
         {/* Anonymous Comments Section */}
         <section className="bg-slate-900/80 border border-slate-800 rounded-md p-6 md:p-8 shadow-xl space-y-6">
-          <div className="flex items-center justify-between border-b border-slate-800/80 pb-4">
+          <div className="border-b border-slate-800/80 pb-4">
             <h3 className="text-base md:text-lg font-bold font-mono text-white flex items-center space-x-2">
               <MessageSquare className="w-5 h-5 text-cyan-400" />
-              <span>ANONYMOUS REPLIES ({comments.length})</span>
+              <span>COMMENTS ({comments.length})</span>
             </h3>
-            <span className="text-xs font-mono text-slate-400">No Registration Required</span>
           </div>
 
           {/* Comment List */}
-          <div className="divide-y divide-slate-800/60">
-            {comments.map((c) => (
-              <div
-                key={c.id}
-                className="py-4 space-y-2"
-              >
-                <div className="flex items-center justify-between text-xs">
-                  <div className="flex items-center space-x-2">
-                    <span className="w-2 h-2 rounded-full bg-cyan-400"></span>
-                    <span className="font-mono font-bold text-cyan-400 text-sm">{c.handle}</span>
-                    <span className="px-1.5 py-0.5 text-[10px] font-mono rounded-sm bg-slate-900 text-slate-400 border border-slate-800">
-                      ANON
+          {comments.length === 0 ? (
+            <div className="py-8 text-center text-slate-500 text-sm font-mono">
+              No comments yet. Write the first comment below!
+            </div>
+          ) : (
+            <div className="divide-y divide-slate-800/60">
+              {comments.map((c) => (
+                <div key={c.id} className="py-4 space-y-2">
+                  <div className="flex items-center justify-between text-xs">
+                    <div className="flex items-center space-x-2">
+                      <span className="w-2 h-2 rounded-full bg-cyan-400"></span>
+                      <span className="font-mono font-bold text-cyan-400 text-sm">{c.handle}</span>
+                    </div>
+                    <span className="font-mono text-slate-500 text-xs">
+                      {formatTimeAgo(c.createdAt)}
                     </span>
                   </div>
-                  <span className="font-mono text-slate-500 text-xs">{c.time}</span>
-                </div>
 
-                <p className="text-sm md:text-base text-slate-200 leading-relaxed font-sans pl-4 border-l-2 border-slate-800">
-                  {c.body}
-                </p>
-              </div>
-            ))}
-          </div>
+                  <p className="text-sm md:text-base text-slate-200 leading-relaxed font-sans pl-4 border-l-2 border-slate-800">
+                    {c.body}
+                  </p>
+                </div>
+              ))}
+            </div>
+          )}
 
           {/* Write Reply Form */}
-          <form onSubmit={handleAddComment} className="space-y-3 pt-4 border-t border-slate-800/80">
+          <form onSubmit={handleAddCommentSubmit} className="space-y-3 pt-4 border-t border-slate-800/80">
             <label className="block text-xs font-mono font-medium text-slate-400">
-              LEAVE AN ANONYMOUS REPLY
+              WRITE A COMMENT
             </label>
             <textarea
               rows={3}
               value={newCommentBody}
               onChange={(e) => setNewCommentBody(e.target.value)}
-              placeholder="Write a message or reply to this thread..."
+              placeholder="Write your comment..."
               className="w-full px-4 py-3 text-sm md:text-base bg-slate-950 text-slate-100 placeholder-slate-500 rounded-md border border-slate-800 focus:outline-none focus:border-cyan-500/60 focus:ring-1 focus:ring-cyan-500/60 resize-y font-sans"
             ></textarea>
             <div className="flex justify-end">
               <button
                 type="submit"
-                className="px-5 py-2.5 bg-cyan-500 hover:bg-cyan-400 text-slate-950 font-bold text-xs md:text-sm rounded-md flex items-center space-x-2 transition-all shadow-md cursor-pointer"
+                disabled={isSubmittingComment || !newCommentBody.trim()}
+                className="px-5 py-2.5 bg-cyan-500 hover:bg-cyan-400 text-slate-950 font-bold text-xs md:text-sm rounded-md flex items-center space-x-2 transition-all shadow-md disabled:opacity-50 cursor-pointer"
               >
                 <Send className="w-4 h-4" />
-                <span>Submit Anonymous Reply</span>
+                <span>{isSubmittingComment ? "Posting..." : "Submit Comment"}</span>
               </button>
             </div>
           </form>
@@ -475,9 +431,8 @@ Feel free to download the attachments below or test uploading your own encrypted
         <div className="max-w-4xl mx-auto px-4 flex items-center justify-between">
           <div className="flex items-center space-x-2 text-slate-400">
             <Shield className="w-4 h-4 text-cyan-400" />
-            <span>FALSECRYPT ANONYMOUS SYSTEM • ZERO LOGS</span>
+            <span>FALSECRYPT ANONYMOUS SYSTEM</span>
           </div>
-          <span>Post ID: {post.id}</span>
         </div>
       </footer>
 

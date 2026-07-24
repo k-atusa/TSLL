@@ -15,12 +15,21 @@ import (
 	"time"
 )
 
+type Comment struct {
+	ID        string `json:"id"`
+	Handle    string `json:"handle"`
+	Body      string `json:"body"`
+	CreatedAt int64  `json:"createdAt"`
+}
+
 type Post struct {
-	ID        string   `json:"id"`
-	Title     string   `json:"title"`
-	Body      string   `json:"body"`
-	Files     []string `json:"files"`
-	CreatedAt int64    `json:"createdAt"`
+	ID        string    `json:"id"`
+	Title     string    `json:"title"`
+	Body      string    `json:"body"`
+	Files     []string  `json:"files"`
+	CreatedAt int64     `json:"createdAt"`
+	Likes     int       `json:"likes"`
+	Comments  []Comment `json:"comments"`
 }
 
 type StorageStats struct {
@@ -246,4 +255,90 @@ func handleGetStats(w http.ResponseWriter, r *http.Request) {
 
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(stats)
+}
+
+// handle post like/upvote
+func handleLikePost(w http.ResponseWriter, r *http.Request) {
+	mu.Lock()
+	defer mu.Unlock()
+
+	id := strings.TrimPrefix(r.URL.Path, "/api/com/posts/")
+	id = strings.TrimSuffix(id, "/like")
+	if id == "" || filepath.Base(id) != id {
+		http.Error(w, "Invalid post ID", http.StatusBadRequest)
+		return
+	}
+
+	postPath := filepath.Join(config.PostDir, "posts", id+".json")
+	data, err := os.ReadFile(postPath)
+	if err != nil {
+		http.Error(w, "Post not found", http.StatusNotFound)
+		return
+	}
+
+	var p Post
+	if err := json.Unmarshal(data, &p); err != nil {
+		http.Error(w, "Corrupt post data", http.StatusInternalServerError)
+		return
+	}
+
+	p.Likes++
+	updatedData, _ := json.Marshal(p)
+	os.WriteFile(postPath, updatedData, 0644)
+
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(p)
+}
+
+// handle add comment to post
+func handleCreateComment(w http.ResponseWriter, r *http.Request) {
+	mu.Lock()
+	defer mu.Unlock()
+
+	id := strings.TrimPrefix(r.URL.Path, "/api/com/posts/")
+	id = strings.TrimSuffix(id, "/comments")
+	if id == "" || filepath.Base(id) != id {
+		http.Error(w, "Invalid post ID", http.StatusBadRequest)
+		return
+	}
+
+	postPath := filepath.Join(config.PostDir, "posts", id+".json")
+	data, err := os.ReadFile(postPath)
+	if err != nil {
+		http.Error(w, "Post not found", http.StatusNotFound)
+		return
+	}
+
+	var p Post
+	if err := json.Unmarshal(data, &p); err != nil {
+		http.Error(w, "Corrupt post data", http.StatusInternalServerError)
+		return
+	}
+
+	var req struct {
+		Body string `json:"body"`
+	}
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil || strings.TrimSpace(req.Body) == "" {
+		http.Error(w, "Comment body is required", http.StatusBadRequest)
+		return
+	}
+
+	commentID := fmt.Sprintf("%d", time.Now().UnixNano())
+	randHex := fmt.Sprintf("%x", time.Now().UnixNano())
+	if len(randHex) > 4 {
+		randHex = randHex[len(randHex)-4:]
+	}
+	comment := Comment{
+		ID:        commentID,
+		Handle:    fmt.Sprintf("Anon#%s", randHex),
+		Body:      strings.TrimSpace(req.Body),
+		CreatedAt: time.Now().UnixNano(),
+	}
+
+	p.Comments = append(p.Comments, comment)
+	updatedData, _ := json.Marshal(p)
+	os.WriteFile(postPath, updatedData, 0644)
+
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(p)
 }
