@@ -7,9 +7,11 @@ import { StorageBar } from "@/components/StorageBar";
 import { PostCard } from "@/components/PostCard";
 import { fetchPosts, fetchStorageStats } from "@/lib/api";
 import { BoardCategory, Post, SortMode, StorageStats } from "@/lib/types";
+import { useLanguage } from "@/lib/LanguageContext";
 import { Shield, RefreshCw, Layers, Sparkles, MessageSquare } from "lucide-react";
 
 export default function Home() {
+  const { t } = useLanguage();
   const [posts, setPosts] = useState<Post[]>([]);
   const [stats, setStats] = useState<StorageStats | null>(null);
   const [loading, setLoading] = useState(true);
@@ -85,6 +87,27 @@ export default function Home() {
     fetchStorageStats().then((s) => setStats(s)).catch(() => {});
   };
 
+  const getGalleryTitle = () => {
+    switch (activeCategory) {
+      case "all":
+        return t("allFeed");
+      case "hot":
+        return t("hotFeed");
+      case "general":
+        return t("general");
+      case "crypto":
+        return t("crypto");
+      case "tech":
+        return t("tech");
+      case "news":
+        return t("news");
+      case "files":
+        return t("files");
+      default:
+        return t("allFeed");
+    }
+  };
+
   return (
     <div className="min-h-screen bg-slate-950 text-slate-100 flex flex-col font-sans selection:bg-cyan-500 selection:text-slate-950">
       {/* Header component */}
@@ -95,50 +118,29 @@ export default function Home() {
         onSearchChange={setSearchQuery}
         sortMode={sortMode}
         onSortChange={setSortMode}
-        onOpenCreateModal={() => setIsCreateModalOpen(true)}
         postCount={filteredPosts.length}
       />
 
       {/* Main Board Layout Container */}
       <main className="flex-1 max-w-6xl w-full mx-auto px-4 py-6 space-y-6">
-        {/* Hero Banner / Board Status */}
-        <div className="relative rounded-md bg-gradient-to-r from-slate-900 via-slate-900/90 to-cyan-950/40 border border-slate-800/80 p-5 md:p-6 overflow-hidden">
-          <div className="absolute top-0 right-0 w-64 h-64 bg-cyan-500/5 rounded-full blur-3xl -z-10 pointer-events-none"></div>
-          <div className="flex flex-wrap items-center justify-between gap-4">
-            <div>
-              <div className="flex items-center space-x-2 text-xs font-mono text-cyan-400 mb-1">
-                <Sparkles className="w-4 h-4" />
-                <span>EPHEMERAL CYPHER BOARD</span>
-              </div>
-              <h2 className="text-xl md:text-2xl font-bold tracking-tight text-white font-mono">
-                {activeCategory === "all"
-                  ? "Global Feed // All Posts"
-                  : `Board Category // #${activeCategory.toUpperCase()}`}
-              </h2>
-              <p className="text-xs text-slate-400 mt-1 max-w-xl">
-                Post anonymously, upload files, or stream media without user accounts. Oldest posts automatically purge when total server storage hits capacity.
-              </p>
-            </div>
-
-            <div className="flex items-center space-x-2">
-              <button
-                onClick={loadPosts}
-                disabled={loading}
-                className="flex items-center space-x-1.5 px-3 py-2 text-xs font-mono rounded-md bg-slate-900 border border-slate-800 hover:border-cyan-500/40 text-slate-300 hover:text-white transition-all cursor-pointer"
-                title="Refresh feed"
-              >
-                <RefreshCw className={`w-3.5 h-3.5 ${loading ? "animate-spin text-cyan-400" : ""}`} />
-                <span>Refresh</span>
-              </button>
-
-              <button
-                onClick={() => setIsCreateModalOpen(true)}
-                className="px-4 py-2 text-xs font-mono font-bold rounded-md bg-cyan-500 hover:bg-cyan-400 text-slate-950 transition-all shadow-md cursor-pointer"
-              >
-                + Post Anon
-              </button>
-            </div>
+        {/* Hero Banner / Gallery Header */}
+        <div className="rounded-md bg-slate-900/80 border border-slate-800/80 p-4 md:p-5 flex items-center justify-between gap-4">
+          <div className="flex items-center space-x-2.5">
+            <span className="w-2.5 h-2.5 rounded-full bg-cyan-400"></span>
+            <h2 className="text-xl md:text-2xl font-bold tracking-tight text-white font-mono">
+              {getGalleryTitle()}
+            </h2>
           </div>
+
+          <button
+            onClick={loadPosts}
+            disabled={loading}
+            className="flex items-center space-x-1.5 px-3 py-1.5 text-xs font-mono rounded-md bg-slate-950 border border-slate-800 hover:border-cyan-500/40 text-slate-300 hover:text-white transition-all cursor-pointer"
+            title="Refresh feed"
+          >
+            <RefreshCw className={`w-3.5 h-3.5 ${loading ? "animate-spin text-cyan-400" : ""}`} />
+            <span>Refresh</span>
+          </button>
         </div>
 
         {/* Post Grid Feed */}
