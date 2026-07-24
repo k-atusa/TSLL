@@ -24,6 +24,8 @@ import {
   normalizeAnonHandle,
 } from "@/lib/api";
 
+import { getGalleryDisplayName } from "@/lib/constants";
+
 interface PostCardProps {
   post: Post;
   onOpenDetail?: (post: Post) => void;
@@ -110,8 +112,8 @@ export const PostCard: React.FC<PostCardProps> = ({ post }) => {
                 {displayHandle}
               </span>
               {categoryTag && (
-                <span className="px-1.5 py-0.5 text-[10px] font-mono font-medium rounded-sm bg-cyan-500/10 text-cyan-400 border border-cyan-500/30">
-                  #{categoryTag}
+                <span className="px-1.5 py-0.5 text-[10px] font-sans font-medium rounded-sm bg-cyan-500/10 text-cyan-400 border border-cyan-500/30">
+                  {getGalleryDisplayName(categoryTag)}
                 </span>
               )}
             </div>

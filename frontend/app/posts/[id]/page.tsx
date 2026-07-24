@@ -38,7 +38,7 @@ import {
   addComment,
 } from "@/lib/api";
 import { BoardCategory, Comment, Post } from "@/lib/types";
-import { getGalleryName } from "@/lib/constants";
+import { getGalleryName, getGalleryDisplayName } from "@/lib/constants";
 
 interface PageProps {
   params: Promise<{ id: string }>;
@@ -244,8 +244,8 @@ export default function PostDetailPage({ params }: PageProps) {
           </Link>
 
           {categoryTag && (
-            <span className="px-2.5 py-1 rounded-sm bg-cyan-500/10 text-cyan-400 border border-cyan-500/30 font-mono text-xs font-semibold">
-              #{categoryTag}
+            <span className="px-2.5 py-1 rounded-sm bg-cyan-500/10 text-cyan-400 border border-cyan-500/30 font-sans text-xs font-semibold">
+              {getGalleryDisplayName(categoryTag)}
             </span>
           )}
         </div>

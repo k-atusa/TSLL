@@ -22,3 +22,12 @@ export function getGalleryName(id: BoardCategory): string {
   const g = GALLERIES.find((item) => item.id === id);
   return g ? g.name : "전체 글";
 }
+
+export function getGalleryDisplayName(tag: string): string {
+  if (!tag) return "";
+  const lower = tag.toLowerCase().trim();
+  const g = GALLERIES.find(
+    (item) => item.id === lower || item.name.toLowerCase() === lower || item.shortName.toLowerCase() === lower,
+  );
+  return g ? g.name : tag;
+}

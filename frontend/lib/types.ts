@@ -32,4 +32,4 @@ export interface StorageStats {
 
 export type BoardCategory = 'all' | 'hot' | 'general' | 'crypto' | 'tech' | 'news' | 'files';
 
-export type SortMode = 'latest' | 'popular' | 'media';
+export type SortMode = 'latest' | 'popular';

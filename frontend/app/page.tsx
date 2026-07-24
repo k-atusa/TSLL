@@ -70,11 +70,6 @@ export default function Home() {
         return true;
       })
       .sort((a, b) => {
-        if (sortMode === "media") {
-          const aMedia = a.files?.length || 0;
-          const bMedia = b.files?.length || 0;
-          return bMedia - aMedia;
-        }
         if (sortMode === "popular") {
           return (b.likes || 0) - (a.likes || 0) || b.createdAt - a.createdAt;
         }
@@ -166,13 +161,6 @@ export default function Home() {
                     }`}
                 >
                   인기순
-                </button>
-                <button
-                  onClick={() => setSortMode("media")}
-                  className={`px-2.5 py-1 rounded transition-colors cursor-pointer ${sortMode === "media" ? "bg-cyan-500 text-slate-950 font-bold" : "text-slate-400 hover:text-white"
-                    }`}
-                >
-                  미디어순
                 </button>
               </div>
 
