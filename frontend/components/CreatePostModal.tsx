@@ -27,7 +27,7 @@ const CATEGORIES: { id: BoardCategory; label: string; prefix: string }[] = [
   { id: "general", label: "General", prefix: "[General]" },
   { id: "crypto", label: "Crypto / ZK", prefix: "[Crypto]" },
   { id: "tech", label: "Tech / Dev", prefix: "[Tech]" },
-  { id: "lounge", label: "Lounge", prefix: "[Lounge]" },
+  { id: "news", label: "News / Politics", prefix: "[News]" },
   { id: "files", label: "File Vault", prefix: "[Files]" },
 ];
 

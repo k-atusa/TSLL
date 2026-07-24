@@ -22,6 +22,6 @@ export interface StorageStats {
   fileCount: number;
 }
 
-export type BoardCategory = 'all' | 'general' | 'crypto' | 'tech' | 'lounge' | 'files';
+export type BoardCategory = 'all' | 'general' | 'crypto' | 'tech' | 'news' | 'files';
 
 export type SortMode = 'latest' | 'popular' | 'media';
