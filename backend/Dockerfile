@@ -31,6 +31,6 @@ COPY --from=builder /app/server /app/server
 RUN mkdir -p /app/data /app/chunks /app/accounts
 
 # Expose HTTP port
-EXPOSE 80
+EXPOSE 4000
 
 CMD ["/app/server"]

@@ -83,7 +83,7 @@ func initEnv() {
 	file, err := os.Open("config.json")
 	if os.IsNotExist(err) {
 		config = Config{
-			Port:    80,
+			Port:    4000,
 			PostDir: "./data",
 			PostCap: 104857600,
 

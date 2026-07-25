@@ -78,8 +78,8 @@ docker compose up -d --build
 ```
 
 Access the services via browser:
-- **Web Frontend UI**: [http://localhost:5000](http://localhost:5000)
-- **Backend API**: [http://localhost:8080](http://localhost:8080)
+- **Web Frontend UI**: [http://localhost:3000](http://localhost:3000)
+- **Backend API**: [http://localhost:4000](http://localhost:4000)
 
 Stop containers:
 ```bash
@@ -132,7 +132,7 @@ Open [http://localhost:3000](http://localhost:3000) in your browser.
 
 | Option | Type | Default | Info |
 | :--- | :--- | :--- | :--- |
-| `port` | `int` | `80` | HTTP server port |
+| `port` | `int` | `4000` | HTTP server port |
 | `postdir` | `string` | `"./data"` | Post storage path (posts & attachments) |
 | `postcap` | `int` (bytes) | `104857600` (100MB) | Post storage capacity limit (auto-prunes when exceeded) |
 | `maxsize` | `int` (bytes) | `536870912` (512MB) | Maximum HTTP body size limit for file uploads |
@@ -153,11 +153,11 @@ Open [http://localhost:3000](http://localhost:3000) in your browser.
 
 You can override default settings via environment variables in `docker-compose.yml` or runtime environment:
 
-- `PORT`: HTTP server port (e.g. `80`, `8080`)
+- `PORT`: HTTP server port (e.g. `4000`)
 - `POST_CAP`: Total post storage cap (e.g. `100MB`, `1GB`, `500M`)
 - `CHUNK_CAP`: Total chunk store storage cap (e.g. `1GB`, `10GB`)
 - `MAX_SIZE`: Maximum request upload body size (e.g. `512MB`, `1GB`)
-- `BACKEND_URL`: Backend API URL referenced by frontend (e.g. `http://backend:80`)
+- `BACKEND_URL`: Backend API URL referenced by frontend (e.g. `http://backend:4000`)
 
 ---
 
