@@ -1,0 +1,42 @@
+services:
+  backend:
+    image: ghcr.io/k-atusa/falsecrypt-backend:latest
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: falsecrypt-backend
+    restart: unless-stopped
+    ports:
+      - "4000:4000"
+    environment:
+      - PORT=4000
+      - POST_CAP=100MB   # 게시글/첨부파일 총 저장 용량 (예: 100MB, 1GB, 500M)
+      - CHUNK_CAP=1GB    # 청크 저장소 용량 제한 (예: 1GB, 10GB)
+      - MAX_SIZE=512MB   # 요청 당 최대 업로드 크기 (예: 512MB)
+    volumes:
+      - backend_data:/app/data
+      - backend_chunks:/app/chunks
+    healthcheck:
+      test: [ "CMD-SHELL", "wget --no-verbose --tries=1 --spider http://localhost:4000/api/com/posts || exit 1" ]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+
+  frontend:
+    image: ghcr.io/k-atusa/falsecrypt-frontend:latest
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: falsecrypt-frontend
+    restart: unless-stopped
+    ports:
+      - "3000:3000"
+    environment:
+      - BACKEND_URL=http://backend:4000
+    depends_on:
+      backend:
+        condition: service_healthy
+
+volumes:
+  backend_data:
+  backend_chunks:

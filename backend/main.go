@@ -11,6 +11,7 @@ import (
 	"os"
 	"path/filepath"
 	"strconv"
+	"strings"
 
 	"github.com/k-atusa/USAG-Lib/Bencrypt"
 	"github.com/taewook427/USAG-KOX/FalseCrypt"
@@ -29,6 +30,48 @@ type Config struct {
 
 var config Config
 
+// Helper to parse human-readable storage sizes (e.g. 100MB, 1GB, 104857600)
+func parseSize(s string) (int64, error) {
+	s = strings.TrimSpace(s)
+	if s == "" {
+		return 0, fmt.Errorf("empty size string")
+	}
+
+	if val, err := strconv.ParseInt(s, 10, 64); err == nil {
+		return val, nil
+	}
+
+	sUpper := strings.ToUpper(s)
+	var multiplier int64 = 1
+	var numStr string
+
+	if strings.HasSuffix(sUpper, "TIB") || strings.HasSuffix(sUpper, "TB") || strings.HasSuffix(sUpper, "T") {
+		multiplier = 1024 * 1024 * 1024 * 1024
+		numStr = strings.TrimRight(sUpper, "TIB")
+	} else if strings.HasSuffix(sUpper, "GIB") || strings.HasSuffix(sUpper, "GB") || strings.HasSuffix(sUpper, "G") {
+		multiplier = 1024 * 1024 * 1024
+		numStr = strings.TrimRight(sUpper, "GIB")
+	} else if strings.HasSuffix(sUpper, "MIB") || strings.HasSuffix(sUpper, "MB") || strings.HasSuffix(sUpper, "M") {
+		multiplier = 1024 * 1024
+		numStr = strings.TrimRight(sUpper, "MIB")
+	} else if strings.HasSuffix(sUpper, "KIB") || strings.HasSuffix(sUpper, "KB") || strings.HasSuffix(sUpper, "K") {
+		multiplier = 1024
+		numStr = strings.TrimRight(sUpper, "KIB")
+	} else if strings.HasSuffix(sUpper, "B") {
+		multiplier = 1
+		numStr = strings.TrimRight(sUpper, "B")
+	} else {
+		return 0, fmt.Errorf("invalid size format: %s", s)
+	}
+
+	numStr = strings.TrimSpace(numStr)
+	val, err := strconv.ParseInt(numStr, 10, 64)
+	if err != nil {
+		return 0, fmt.Errorf("invalid number in size: %s", s)
+	}
+	return val * multiplier, nil
+}
+
 // init environment
 func initEnv() {
 	// move to executable path
@@ -40,7 +83,7 @@ func initEnv() {
 	file, err := os.Open("config.json")
 	if os.IsNotExist(err) {
 		config = Config{
-			Port:    80,
+			Port:    4000,
 			PostDir: "./data",
 			PostCap: 104857600,
 
@@ -61,6 +104,25 @@ func initEnv() {
 		}
 	}
 
+	// Environment variable overrides
+	if envPort := os.Getenv("PORT"); envPort != "" {
+		if p, err := strconv.Atoi(envPort); err == nil {
+			config.Port = p
+		}
+	}
+	if envPostCap := os.Getenv("POST_CAP"); envPostCap != "" {
+		if capVal, err := parseSize(envPostCap); err == nil && capVal > 0 {
+			config.PostCap = capVal
+			log.Printf("Overriding PostCap from ENV: %d bytes (%s)", config.PostCap, envPostCap)
+		}
+	}
+	if envMaxSize := os.Getenv("MAX_SIZE"); envMaxSize != "" {
+		if sizeVal, err := parseSize(envMaxSize); err == nil && sizeVal > 0 {
+			config.MaxSize = sizeVal
+			log.Printf("Overriding MaxSize from ENV: %d bytes (%s)", config.MaxSize, envMaxSize)
+		}
+	}
+
 	// ensure directories exist
 	os.MkdirAll(filepath.Join(config.PostDir, "posts"), 0755)
 	os.MkdirAll(filepath.Join(config.PostDir, "files"), 0755)
@@ -74,7 +136,14 @@ func initCS() (*ChunkSvr, error) {
 		meta.MainPath = "./accounts"
 		meta.BfSize = 1048576
 		meta.Paths = []string{"./chunks"}
-		meta.Caps = []int64{1024 * 1048576}
+		chunkCap := int64(1024 * 1048576) // default 1GB
+		if envChunkCap := os.Getenv("CHUNK_CAP"); envChunkCap != "" {
+			if capVal, parseErr := parseSize(envChunkCap); parseErr == nil && capVal > 0 {
+				chunkCap = capVal
+				log.Printf("Setting initial ChunkCap from ENV: %d bytes (%s)", chunkCap, envChunkCap)
+			}
+		}
+		meta.Caps = []int64{chunkCap}
 		meta.Weights = []float32{1.0}
 		meta.WriteKey = Bencrypt.Random(32)
 
@@ -91,6 +160,14 @@ func initCS() (*ChunkSvr, error) {
 	} else {
 		if initErr := meta.Init(string(metaBytes)); initErr != nil {
 			return nil, fmt.Errorf("failed to initialize chunkmeta: %v", initErr)
+		}
+		if envChunkCap := os.Getenv("CHUNK_CAP"); envChunkCap != "" {
+			if capVal, parseErr := parseSize(envChunkCap); parseErr == nil && capVal > 0 {
+				if len(meta.Caps) > 0 {
+					meta.Caps[0] = capVal
+					log.Printf("Overriding ChunkCap from ENV: %d bytes (%s)", capVal, envChunkCap)
+				}
+			}
 		}
 	}
 
@@ -275,31 +352,24 @@ func main() {
 	}()
 
 	initEnv()
-	allowedFiles := map[string]bool{
-		"/":            true,
-		"/index.html":  true,
-		"/app.js":      true,
-		"/favicon.png": true,
-	} // whitelist of files to serve
 
-	// HTTP frontend handler
-	http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
-		path := filepath.Clean(r.URL.Path)
-		path = filepath.ToSlash(path)
-		if !allowedFiles[path] {
-			http.Error(w, "Forbidden", http.StatusForbidden)
-			return
+	enableCORS := func(w http.ResponseWriter, r *http.Request) bool {
+		w.Header().Set("Access-Control-Allow-Origin", "*")
+		w.Header().Set("Access-Control-Allow-Methods", "GET, POST, OPTIONS, PUT, DELETE")
+		w.Header().Set("Access-Control-Allow-Headers", "Content-Type, Authorization, Chksum")
+		if r.Method == http.MethodOptions {
+			w.WriteHeader(http.StatusOK)
+			return true
 		}
-		if path == "/" {
-			http.ServeFile(w, r, "./index.html")
-		} else {
-			http.ServeFile(w, r, filepath.Join(".", path))
-		}
-	})
+		return false
+	}
 
 	// HTTP files handler
 	filesFs := http.FileServer(http.Dir(filepath.Join(config.PostDir, "files")))
 	http.HandleFunc("/api/com/files/", func(w http.ResponseWriter, r *http.Request) {
+		if enableCORS(w, r) {
+			return
+		}
 		w.Header().Set("Content-Security-Policy", "default-src 'none'; img-src 'self'; media-src 'self'; style-src 'unsafe-inline'") // prevent XSS
 		w.Header().Set("X-Content-Type-Options", "nosniff")
 		http.StripPrefix("/api/com/files/", filesFs).ServeHTTP(w, r)
@@ -307,6 +377,9 @@ func main() {
 
 	// register posting handlers
 	http.HandleFunc("/api/com/posts", func(w http.ResponseWriter, r *http.Request) {
+		if enableCORS(w, r) {
+			return
+		}
 		if r.Method == http.MethodGet {
 			handleGetPosts(w, r)
 		} else if r.Method == http.MethodPost {
@@ -316,8 +389,27 @@ func main() {
 		}
 	})
 	http.HandleFunc("/api/com/posts/", func(w http.ResponseWriter, r *http.Request) {
-		if r.Method == http.MethodGet {
+		if enableCORS(w, r) {
+			return
+		}
+		if strings.HasSuffix(r.URL.Path, "/like") && r.Method == http.MethodPost {
+			handleLikePost(w, r)
+		} else if strings.HasSuffix(r.URL.Path, "/dislike") && r.Method == http.MethodPost {
+			handleDislikePost(w, r)
+		} else if strings.HasSuffix(r.URL.Path, "/comments") && r.Method == http.MethodPost {
+			handleCreateComment(w, r)
+		} else if r.Method == http.MethodGet {
 			handleGetPostDetail(w, r)
+		} else {
+			http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+		}
+	})
+	http.HandleFunc("/api/com/stats", func(w http.ResponseWriter, r *http.Request) {
+		if enableCORS(w, r) {
+			return
+		}
+		if r.Method == http.MethodGet {
+			handleGetStats(w, r)
 		} else {
 			http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
 		}
