@@ -60,26 +60,36 @@ FalseCrypt-server/
 
 ## 🚀 Build & Deployment Guide
 
-### Option 1. Standalone Lightweight Go Execution (Recommended for Production)
+### Option 1. Download Pre-built Binary (All-in-One Standalone Execution)
 
-To run the complete service stack from a single Go binary without Docker or Node.js at runtime:
+Download the pre-built `fcinside` binary to run the entire application (Web Interface + Backend API) out-of-the-box in a single file without needing Node.js, Go, or build steps.
+
+1. **Download Binary**: Fetch the `fcinside` binary from [GitHub Releases](https://github.com/k-atusa/FalseCrypt-server/releases) or build artifacts.
+2. **Run Server**:
+   ```bash
+   chmod +x fcinside
+   ./fcinside
+   ```
+> **All-in-One Single Execution**: Web UI and backend API run instantly on [http://localhost:4000](http://localhost:4000).
+
+---
+
+### Option 2. Manual Standalone Build
+
+To compile the `fcinside` executable manually from source:
 
 ```bash
-# 1. Export Next.js frontend to static HTML/CSS/JS
+# 1. Export Next.js frontend & sync to backend
 cd frontend
 npm install
-npm run build     # Generates frontend/out
+npm run build     # Generates frontend/out and syncs backend/out
 
-# 2. Copy static build output to backend
-cd ..
-cp -r frontend/out backend/out
+# 2. Build standalone Go backend binary
+cd ../backend
+go build -ldflags="-s -w" -trimpath -o fcinside .
 
-# 3. Build standalone Go backend binary
-cd backend
-go build -ldflags="-s -w" -trimpath -o server .
-
-# 4. Run single server binary
-./server
+# 3. Run single server binary
+./fcinside
 ```
 
 Access the application directly in your browser:
