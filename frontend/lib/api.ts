@@ -116,8 +116,8 @@ export async function fetchPosts(): Promise<Post[]> {
     const data = await res.json();
     return data || [];
   } catch (err) {
-    console.warn("API fetch error, returning demo fallback posts if server offline", err);
-    return getFallbackPosts();
+    console.warn("API fetch error, returning empty list", err);
+    return [];
   }
 }
 
@@ -142,9 +142,9 @@ export async function fetchStorageStats(): Promise<StorageStats> {
   } catch (err) {
     console.warn("API fetch stats error, using default", err);
     return {
-      usedBytes: 1024 * 350,
+      usedBytes: 0,
       capBytes: 104857600, // 100MB
-      postCount: 3,
+      postCount: 0,
       fileCount: 0,
     };
   }
@@ -225,32 +225,4 @@ export async function addComment(id: string, body: string, handle?: string): Pro
   });
   if (!res.ok) throw new Error("Failed to post comment");
   return await res.json();
-}
-
-// Demo fallback data if Go backend is not running yet during development
-function getFallbackPosts(): Post[] {
-  const now = Date.now() * 1_000_000;
-  return [
-    {
-      id: "1737719200000000000",
-      title: "[Notice] Welcome to FalseCrypt Anonymous CypherBoard v2.0",
-      body: "Welcome to FalseCrypt AnonBoard. Post freely without registration. Posts are auto-capped and older posts automatically purge when storage limit is reached. Encrypted, anonymous, ephemeral.",
-      files: [],
-      createdAt: now - 1000000 * 60 * 15,
-    },
-    {
-      id: "1737719100000000000",
-      title: "[Crypto] Zero-Knowledge Proofs & Ephemeral Message Storage",
-      body: "Discussion thread on ZK-SNARKs implementation in decentralized chunk storage backends. Anyone analyzed the chunk meta bloom filters yet?",
-      files: [],
-      createdAt: now - 1000000 * 60 * 120,
-    },
-    {
-      id: "1737719000000000000",
-      title: "[Tech] Go Fiber vs Stdlib Net/HTTP benchmark comparison",
-      body: "Stdlib net/http with Go 1.22 routing features is surprisingly fast. Built-in chunk balancer performance looks solid.",
-      files: [],
-      createdAt: now - 1000000 * 60 * 360,
-    },
-  ];
 }
