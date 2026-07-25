@@ -8,6 +8,11 @@ services:
     restart: unless-stopped
     ports:
       - "8080:80"
+    environment:
+      - PORT=80
+      - POST_CAP=100MB   # 게시글/첨부파일 총 저장 용량 (예: 100MB, 1GB, 500M)
+      - CHUNK_CAP=1GB    # 청크 저장소 용량 제한 (예: 1GB, 10GB)
+      - MAX_SIZE=512MB   # 요청 당 최대 업로드 크기 (예: 512MB)
     volumes:
       - backend_data:/app/data
       - backend_chunks:/app/chunks
