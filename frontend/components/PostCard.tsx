@@ -102,35 +102,35 @@ export const PostCard: React.FC<PostCardProps> = ({ post }) => {
             <div className="flex items-center space-x-2.5">
               {/* Tripcode Badge */}
               <div
-                className={`w-7 h-7 rounded-sm bg-gradient-to-br ${anonInfo.color} flex items-center justify-center text-white text-[10px] font-mono font-bold shadow-sm`}
+                className={`w-8 h-8 rounded-sm bg-gradient-to-br ${anonInfo.color} flex items-center justify-center text-white text-xs font-mono font-bold shadow-sm`}
               >
                 {getHandleBadgeText(displayHandle)}
               </div>
 
               <div>
                 <div className="flex items-center space-x-2">
-                  <span className="font-mono text-xs font-semibold text-slate-200 group-hover:text-cyan-300 transition-colors">
+                  <span className="font-mono text-sm font-semibold text-slate-200 group-hover:text-cyan-300 transition-colors">
                     {displayHandle}
                   </span>
                   {categoryTag && (
-                    <span className="px-1.5 py-0.5 text-[10px] font-sans font-medium rounded-sm bg-cyan-500/10 text-cyan-400 border border-cyan-500/30">
+                    <span className="px-2 py-0.5 text-xs font-sans font-medium rounded-sm bg-cyan-500/10 text-cyan-400 border border-cyan-500/30">
                       {getGalleryDisplayName(categoryTag)}
                     </span>
                   )}
                 </div>
-                <span className="text-[11px] text-slate-400 font-mono">{formattedTime}</span>
+                <span className="text-xs text-slate-400 font-mono">{formattedTime}</span>
               </div>
             </div>
           </div>
 
           {/* Title */}
-          <h3 className="text-base font-bold text-slate-100 group-hover:text-white mb-2 leading-snug tracking-tight">
+          <h3 className="text-lg md:text-xl font-bold text-slate-100 group-hover:text-white mb-2 leading-snug tracking-tight">
             {cleanTitle}
           </h3>
 
           {/* Body preview */}
           {post.body && (
-            <p className="text-xs text-slate-300 line-clamp-3 mb-3 leading-relaxed whitespace-pre-wrap">
+            <p className="text-sm text-slate-300 line-clamp-3 mb-3 leading-relaxed whitespace-pre-wrap">
               {stripAttachmentTokens(post.body)}
             </p>
           )}
@@ -168,9 +168,9 @@ export const PostCard: React.FC<PostCardProps> = ({ post }) => {
               {otherFiles.map((file, idx) => (
                 <div
                   key={idx}
-                  className="flex items-center space-x-1.5 px-2.5 py-1 text-[11px] font-mono rounded-sm bg-slate-950 border border-slate-800 text-slate-300 hover:text-cyan-400 hover:border-cyan-500/40 transition-colors"
+                  className="flex items-center space-x-1.5 px-2.5 py-1 text-xs font-mono rounded-sm bg-slate-950 border border-slate-800 text-slate-300 hover:text-cyan-400 hover:border-cyan-500/40 transition-colors"
                 >
-                  <Paperclip className="w-3 h-3 text-cyan-400 shrink-0" />
+                  <Paperclip className="w-3.5 h-3.5 text-cyan-400 shrink-0" />
                   <span className="truncate max-w-[140px]">{getCleanFileName(file)}</span>
                 </div>
               ))}
@@ -179,42 +179,42 @@ export const PostCard: React.FC<PostCardProps> = ({ post }) => {
         </div>
 
         {/* Card Footer / Reactions bar */}
-        <div className="mt-auto pt-3 border-t border-slate-800/70 flex flex-wrap items-center justify-between text-xs text-slate-400 gap-2">
+        <div className="mt-auto pt-3 border-t border-slate-800/70 flex flex-wrap items-center justify-between text-xs sm:text-sm text-slate-300 gap-2">
           <div className="flex items-center space-x-2">
             <button
               onClick={handleUpvote}
-              className={`flex items-center space-x-1.5 px-2.5 py-1 rounded-sm border transition-all ${
+              className={`flex items-center space-x-1.5 px-3 py-1.5 rounded-sm border transition-all ${
                 hasUpvoted
                   ? "bg-cyan-500/20 text-cyan-300 border-cyan-500/40 font-bold"
-                  : "bg-slate-950/60 text-slate-400 border-slate-800 hover:text-slate-200 hover:border-slate-700"
+                  : "bg-slate-950/60 text-slate-300 border-slate-800 hover:text-slate-100 hover:border-slate-700"
               }`}
             >
-              <ThumbsUp className={`w-3.5 h-3.5 ${hasUpvoted ? "text-cyan-400 fill-cyan-400/20" : ""}`} />
-              <span>{likesCount}</span>
+              <ThumbsUp className={`w-4 h-4 ${hasUpvoted ? "text-cyan-400 fill-cyan-400/20" : ""}`} />
+              <span className="text-xs font-medium">{likesCount}</span>
             </button>
 
             <button
               onClick={handleDownvote}
-              className={`flex items-center space-x-1.5 px-2.5 py-1 rounded-sm border transition-all ${
+              className={`flex items-center space-x-1.5 px-3 py-1.5 rounded-sm border transition-all ${
                 hasDownvoted
                   ? "bg-rose-500/20 text-rose-300 border-rose-500/40 font-bold"
-                  : "bg-slate-950/60 text-slate-400 border-slate-800 hover:text-slate-200 hover:border-slate-700"
+                  : "bg-slate-950/60 text-slate-300 border-slate-800 hover:text-slate-100 hover:border-slate-700"
               }`}
             >
-              <ThumbsDown className={`w-3.5 h-3.5 ${hasDownvoted ? "text-rose-400 fill-rose-400/20" : ""}`} />
-              <span>{dislikesCount}</span>
+              <ThumbsDown className={`w-4 h-4 ${hasDownvoted ? "text-rose-400 fill-rose-400/20" : ""}`} />
+              <span className="text-xs font-medium">{dislikesCount}</span>
             </button>
 
-            <span className="flex items-center space-x-1 px-2.5 py-1 rounded-sm border border-slate-800 bg-slate-950/60 text-slate-400 font-mono">
-              <MessageSquare className="w-3.5 h-3.5 text-slate-500" />
+            <span className="flex items-center space-x-1.5 px-3 py-1.5 rounded-sm border border-slate-800 bg-slate-950/60 text-slate-300 font-mono text-xs">
+              <MessageSquare className="w-4 h-4 text-slate-400" />
               <span>{post.comments?.length || 0}</span>
             </span>
           </div>
 
           <div className="flex items-center space-x-2">
             {post.files && post.files.length > 0 && (
-              <span className="flex items-center space-x-1 text-[11px] font-mono text-cyan-400 bg-cyan-950/40 px-2 py-0.5 rounded-sm border border-cyan-800/40">
-                <Paperclip className="w-3 h-3" />
+              <span className="flex items-center space-x-1 text-xs font-mono text-cyan-400 bg-cyan-950/40 px-2 py-0.5 rounded-sm border border-cyan-800/40">
+                <Paperclip className="w-3.5 h-3.5" />
                 <span>{post.files.length}</span>
               </span>
             )}
@@ -224,7 +224,7 @@ export const PostCard: React.FC<PostCardProps> = ({ post }) => {
               className="p-1.5 rounded-sm bg-slate-950/60 border border-slate-800 hover:text-cyan-400 hover:border-cyan-500/40 transition-colors text-slate-400"
               title="Copy share link"
             >
-              {copied ? <Check className="w-3.5 h-3.5 text-emerald-400" /> : <Share2 className="w-3.5 h-3.5" />}
+              {copied ? <Check className="w-4 h-4 text-emerald-400" /> : <Share2 className="w-4 h-4" />}
             </button>
           </div>
         </div>

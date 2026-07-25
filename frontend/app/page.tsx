@@ -99,11 +99,11 @@ export default function Home() {
         <aside className="w-full md:w-64 flex-shrink-0 space-y-4 font-sans">
           <div className="bg-slate-900/80 border border-slate-800 rounded-md p-4 shadow-md space-y-3">
             <div className="flex items-center justify-between border-b border-slate-800 pb-2.5">
-              <h3 className="text-xs font-bold text-slate-300 flex items-center space-x-1.5 uppercase tracking-wider">
+              <h3 className="text-sm font-bold text-slate-200 flex items-center space-x-1.5 uppercase tracking-wider">
                 <Layers className="w-4 h-4 text-cyan-400" />
                 <span>갤러리 목록</span>
               </h3>
-              <span className="text-[10px] font-mono text-slate-500">FCINSIDE</span>
+              <span className="text-xs font-mono text-slate-400">FCINSIDE</span>
             </div>
 
             {/* Gallery Item Buttons */}
@@ -114,16 +114,16 @@ export default function Home() {
                   <button
                     key={g.id}
                     onClick={() => setActiveCategory(g.id)}
-                    className={`w-full text-left px-3 py-2.5 rounded text-xs font-medium flex items-center justify-between transition-all cursor-pointer ${isSelected
+                    className={`w-full text-left px-3 py-2.5 rounded text-sm font-medium flex items-center justify-between transition-all cursor-pointer ${isSelected
                         ? "bg-cyan-500/20 text-cyan-300 border border-cyan-500/40 font-bold shadow-sm"
-                        : "text-slate-400 hover:text-slate-200 hover:bg-slate-800/60 border border-transparent"
+                        : "text-slate-300 hover:text-slate-100 hover:bg-slate-800/60 border border-transparent"
                       }`}
                   >
                     <div className="flex items-center space-x-2 truncate">
-                      <span>{g.icon}</span>
-                      <span className="truncate">{g.name}</span>
+                      <span className="text-base">{g.icon}</span>
+                      <span className="truncate text-sm">{g.name}</span>
                     </div>
-                    <span className={`text-[10px] font-mono px-1.5 py-0.5 rounded ${isSelected ? "bg-cyan-500 text-slate-950 font-bold" : "bg-slate-950 text-slate-500"
+                    <span className={`text-xs font-mono px-1.5 py-0.5 rounded ${isSelected ? "bg-cyan-500 text-slate-950 font-bold" : "bg-slate-950 text-slate-400"
                       }`}>
                       {g.shortName}
                     </span>
