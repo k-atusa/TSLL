@@ -1,6 +1,14 @@
 chunkmeta.json
 config.json
 server
+backend/server
 accounts/
 chunks/
 data/
+backend/data/
+backend/chunks/
+backend/accounts/
+out/
+backend/out/
+frontend/out/
+frontend/.next/
