@@ -94,9 +94,9 @@ export default function Home() {
       />
 
       {/* Main Layout Container: Left Sidebar + Right Feed */}
-      <main className="flex-1 max-w-[1400px] w-full mx-auto px-4 sm:px-6 py-6 flex flex-col md:flex-row gap-6">
+      <main className="flex-1 max-w-[1400px] w-full mx-auto px-4 sm:px-6 py-6 flex flex-col min-[870px]:flex-row gap-6">
         {/* Left Sidebar: DCInside Style Gallery List */}
-        <aside className="w-full md:w-64 flex-shrink-0 space-y-4 font-sans">
+        <aside className="w-full min-[870px]:w-72 lg:w-80 flex-shrink-0 space-y-4 font-sans">
           <div className="bg-slate-900/80 border border-slate-800 rounded-md p-4 shadow-md space-y-3">
             <div className="flex items-center justify-between border-b border-slate-800 pb-2.5">
               <h3 className="text-sm font-bold text-slate-200 flex items-center space-x-1.5 uppercase tracking-wider">
@@ -178,7 +178,7 @@ export default function Home() {
 
           {/* Post Feed List */}
           {loading ? (
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 min-[870px]:grid-cols-2 gap-4">
               {[1, 2, 3, 4].map((i) => (
                 <div
                   key={i}
@@ -209,7 +209,7 @@ export default function Home() {
               </Link>
             </div>
           ) : (
-            <div className="columns-1 md:columns-2 gap-4 space-y-4">
+            <div className="columns-1 min-[870px]:columns-2 gap-4 space-y-4">
               {filteredPosts.map((post) => (
                 <div key={post.id} className="break-inside-avoid">
                   <PostCard post={post} />
