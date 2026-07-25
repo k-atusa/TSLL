@@ -1,4 +1,4 @@
-# FalseCrypt-server v1.0.0
+# FalseCrypt-server
 
 project USAG: FalseCrypt server
 
