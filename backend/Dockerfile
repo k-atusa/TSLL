@@ -24,9 +24,8 @@ WORKDIR /app
 # Install ca-certificates and tzdata
 RUN apk add --no-cache ca-certificates tzdata
 
-# Copy built binary and config from builder
+# Copy built binary from builder
 COPY --from=builder /app/server /app/server
-COPY --from=builder /app/config.json /app/config.json
 
 # Create data directories
 RUN mkdir -p /app/data /app/chunks /app/accounts
