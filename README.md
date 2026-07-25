@@ -73,8 +73,8 @@ The quickest way to run the complete service stack:
 git clone https://github.com/k-atusa/FalseCrypt-server.git
 cd FalseCrypt-server
 
-# 2. Build and start services with Docker Compose
-docker compose up -d --build
+# 2. Start services with Docker Compose
+docker compose up -d
 ```
 
 Access the services via browser:
