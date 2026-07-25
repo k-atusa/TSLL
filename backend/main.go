@@ -461,6 +461,24 @@ func main() {
 			return
 		}
 
+		// Fallback for Next.js App Router dynamic post detail route (/posts/[id])
+		if strings.HasPrefix(reqPath, "posts/") && !strings.HasPrefix(reqPath, "posts/new") {
+			if strings.HasSuffix(reqPath, ".txt") {
+				if fTxt, err := subFS.Open("posts/preview.txt"); err == nil {
+					defer fTxt.Close()
+					w.Header().Set("Content-Type", "text/plain; charset=utf-8")
+					io.Copy(w, fTxt)
+					return
+				}
+			}
+			if fDetail, err := subFS.Open("posts/preview.html"); err == nil {
+				defer fDetail.Close()
+				w.Header().Set("Content-Type", "text/html; charset=utf-8")
+				io.Copy(w, fDetail)
+				return
+			}
+		}
+
 		// Fallback to index.html
 		if indexFile, err := subFS.Open("index.html"); err == nil {
 			defer indexFile.Close()

@@ -43,7 +43,6 @@ interface PageProps {
 
 export default function PostDetailClient({ params }: PageProps) {
   const resolvedParams = use(params);
-  const postId = resolvedParams.id;
   const router = useRouter();
 
   const [post, setPost] = useState<Post | null>(null);
@@ -67,20 +66,45 @@ export default function PostDetailClient({ params }: PageProps) {
   const previewAnon = React.useMemo(() => generateRandomAnonId(), []);
 
   useEffect(() => {
+    let isMounted = true;
     async function loadData() {
-      if (!postId) return;
-      setLoading(true);
-      const data = await fetchPostDetail(postId);
-      if (data) {
-        setPost(data);
-        setLikesCount(data.likes || 0);
-        setDislikesCount(data.dislikes || 0);
-        setComments(data.comments || []);
+      let idToFetch = resolvedParams?.id;
+      if (typeof window !== "undefined") {
+        const parts = window.location.pathname.split("/").filter(Boolean);
+        const last = parts[parts.length - 1];
+        if (last && last !== "preview" && last !== "posts") {
+          idToFetch = last;
+        }
       }
-      setLoading(false);
+
+      if (!idToFetch || idToFetch === "preview") {
+        if (isMounted) setLoading(false);
+        return;
+      }
+
+      if (isMounted) setLoading(true);
+      try {
+        const data = await fetchPostDetail(idToFetch);
+        if (isMounted) {
+          if (data && data.id) {
+            setPost(data);
+            setLikesCount(data.likes || 0);
+            setDislikesCount(data.dislikes || 0);
+            setComments(data.comments || []);
+          }
+        }
+      } catch (err) {
+        console.error("Failed to load post detail:", err);
+      } finally {
+        if (isMounted) setLoading(false);
+      }
     }
+
     loadData();
-  }, [postId]);
+    return () => {
+      isMounted = false;
+    };
+  }, [resolvedParams]);
 
   const handleCopyLink = () => {
     navigator.clipboard.writeText(window.location.href);
@@ -172,7 +196,32 @@ export default function PostDetailClient({ params }: PageProps) {
     );
   }
 
-  if (!post) return null;
+  if (!post) {
+    return (
+      <div className="min-h-screen bg-slate-950 text-slate-100 flex flex-col font-sans">
+        <Header
+          activeCategory="all"
+          onSelectCategory={() => router.push("/")}
+          searchQuery=""
+          onSearchChange={() => { }}
+          sortMode="latest"
+          onSortChange={() => { }}
+          postCount={0}
+        />
+        <main className="flex-1 max-w-4xl w-full mx-auto px-4 py-16 text-center space-y-4">
+          <h2 className="text-xl font-bold text-slate-200">게시글을 찾을 수 없습니다</h2>
+          <p className="text-sm text-slate-400">요청하신 게시글이 존재하지 않거나 삭제되었습니다.</p>
+          <Link
+            href="/"
+            className="inline-flex items-center space-x-2 px-4 py-2 bg-cyan-500 hover:bg-cyan-400 text-slate-950 font-bold text-xs rounded-md transition"
+          >
+            <ArrowLeft className="w-4 h-4" />
+            <span>목록으로 돌아가기</span>
+          </Link>
+        </main>
+      </div>
+    );
+  }
 
   const postHandle = post.handle ? normalizeAnonHandle(post.handle) || post.handle : generateAnonId(post.id).handle;
   const anonInfo = post.handle ? generateAnonId(post.handle) : generateAnonId(post.id);
