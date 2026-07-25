@@ -135,15 +135,7 @@ export default function CreatePostPage() {
   return (
     <div className="min-h-screen bg-slate-950 text-slate-100 flex flex-col font-sans selection:bg-cyan-500 selection:text-slate-950">
       {/* Top Header */}
-      <Header
-        activeCategory="all"
-        onSelectCategory={() => router.push("/")}
-        searchQuery=""
-        onSearchChange={() => { }}
-        sortMode="latest"
-        onSortChange={() => { }}
-        postCount={0}
-      />
+      <Header />
 
       <main className="flex-1 max-w-[1000px] w-full mx-auto px-4 py-8 space-y-6">
         {/* Navigation Bar */}

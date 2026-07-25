@@ -1,7 +1,8 @@
 "use client";
 
-import React from "react";
+import React, { useState, useEffect } from "react";
 import Link from "next/link";
+import { useRouter, usePathname } from "next/navigation";
 import { Plus, Search } from "lucide-react";
 import { BoardCategory, SortMode } from "@/lib/types";
 
@@ -19,6 +20,49 @@ export const Header: React.FC<HeaderProps> = ({
   searchQuery = "",
   onSearchChange,
 }) => {
+  const router = useRouter();
+  const pathname = usePathname();
+  const [internalQuery, setInternalQuery] = useState(searchQuery);
+
+  useEffect(() => {
+    setInternalQuery(searchQuery);
+  }, [searchQuery]);
+
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const val = e.target.value;
+    setInternalQuery(val);
+    if (onSearchChange) {
+      onSearchChange(val);
+    }
+  };
+
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    const trimmed = internalQuery.trim();
+    if (pathname !== "/") {
+      router.push(trimmed ? `/?q=${encodeURIComponent(trimmed)}` : "/");
+    } else if (onSearchChange) {
+      onSearchChange(internalQuery);
+      if (trimmed) {
+        window.history.replaceState(null, "", `/?q=${encodeURIComponent(trimmed)}`);
+      } else {
+        window.history.replaceState(null, "", "/");
+      }
+    } else {
+      router.push(trimmed ? `/?q=${encodeURIComponent(trimmed)}` : "/");
+    }
+  };
+
+  const handleClear = () => {
+    setInternalQuery("");
+    if (onSearchChange) {
+      onSearchChange("");
+    }
+    if (pathname === "/") {
+      window.history.replaceState(null, "", "/");
+    }
+  };
+
   return (
     <header className="sticky top-0 z-40 border-b border-slate-800/90 bg-slate-950/90 backdrop-blur-md">
       <div className="max-w-[1400px] mx-auto px-4 sm:px-6 h-14 flex items-center justify-between gap-4">
@@ -42,27 +86,26 @@ export const Header: React.FC<HeaderProps> = ({
 
         {/* Search & Write Post Button */}
         <div className="flex items-center space-x-3">
-          {/* Search Box */}
-          {onSearchChange && (
-            <div className="relative w-44 sm:w-64 md:w-80">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-500" />
-              <input
-                type="text"
-                value={searchQuery}
-                onChange={(e) => onSearchChange(e.target.value)}
-                placeholder="검색어를 입력하세요..."
-                className="w-full pl-9 pr-7 py-1.5 text-xs sm:text-sm bg-slate-900 text-slate-200 placeholder-slate-500 rounded border border-slate-800 focus:outline-none focus:border-cyan-500/60 transition-all font-sans"
-              />
-              {searchQuery && (
-                <button
-                  onClick={() => onSearchChange("")}
-                  className="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-white text-xs"
-                >
-                  ✕
-                </button>
-              )}
-            </div>
-          )}
+          {/* Search Box Form */}
+          <form onSubmit={handleSubmit} className="relative w-44 sm:w-64 md:w-80">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-500 pointer-events-none" />
+            <input
+              type="text"
+              value={internalQuery}
+              onChange={handleChange}
+              placeholder="검색어를 입력하세요..."
+              className="w-full pl-9 pr-7 py-1.5 text-xs sm:text-sm bg-slate-900 text-slate-200 placeholder-slate-500 rounded border border-slate-800 focus:outline-none focus:border-cyan-500/60 transition-all font-sans"
+            />
+            {internalQuery && (
+              <button
+                type="button"
+                onClick={handleClear}
+                className="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-white text-xs cursor-pointer p-0.5"
+              >
+                ✕
+              </button>
+            )}
+          </form>
 
           {/* Write Post Button */}
           <Link
@@ -77,3 +120,4 @@ export const Header: React.FC<HeaderProps> = ({
     </header>
   );
 };
+

@@ -221,15 +221,7 @@ export default function PostDetailPage({ params }: PageProps) {
       )}
 
       {/* Main Header */}
-      <Header
-        activeCategory="all"
-        onSelectCategory={() => router.push("/")}
-        searchQuery=""
-        onSearchChange={() => { }}
-        sortMode="latest"
-        onSortChange={() => { }}
-        postCount={0}
-      />
+      <Header />
 
       {/* Main Content Area */}
       <main className="flex-1 max-w-[1000px] w-full mx-auto px-4 py-8 space-y-8">

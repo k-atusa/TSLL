@@ -34,6 +34,13 @@ export default function Home() {
 
   useEffect(() => {
     loadPosts();
+    if (typeof window !== "undefined") {
+      const params = new URLSearchParams(window.location.search);
+      const q = params.get("q");
+      if (q) {
+        setSearchQuery(q);
+      }
+    }
   }, []);
 
   // Filter & Sort logic
