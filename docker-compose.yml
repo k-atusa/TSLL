@@ -1,0 +1,35 @@
+services:
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: falsecrypt-backend
+    restart: unless-stopped
+    ports:
+      - "8080:80"
+    volumes:
+      - backend_data:/app/data
+      - backend_chunks:/app/chunks
+    healthcheck:
+      test: [ "CMD-SHELL", "wget --no-verbose --tries=1 --spider http://localhost:80/api/com/posts || exit 1" ]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: falsecrypt-frontend
+    restart: unless-stopped
+    ports:
+      - "5000:3000"
+    environment:
+      - BACKEND_URL=http://backend:80
+    depends_on:
+      backend:
+        condition: service_healthy
+
+volumes:
+  backend_data:
+  backend_chunks:
