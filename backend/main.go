@@ -12,8 +12,10 @@ import (
 	"net/http"
 	"os"
 	"path/filepath"
+	"runtime/debug"
 	"strconv"
 	"strings"
+	"time"
 
 	"github.com/k-atusa/USAG-Lib/Bencrypt"
 	"github.com/taewook427/USAG-KOX/FalseCrypt"
@@ -205,7 +207,7 @@ func registerFCs(cs *ChunkSvr) {
 			httpErr(w, err)
 			return
 		}
-		w.Write([]byte(logStr))
+		io.WriteString(w, logStr)
 	})
 
 	http.HandleFunc("/api/fc/checkchunk", func(w http.ResponseWriter, r *http.Request) {
@@ -275,6 +277,9 @@ func httpErr(w http.ResponseWriter, err error) {
 }
 
 func main() {
+	// Tune GC target percentage for low-memory footprint (trigger GC at 30% heap growth)
+	debug.SetGCPercent(30)
+
 	defer func() {
 		if e := recover(); e != nil {
 			os.WriteFile("./panic-log.txt", []byte(fmt.Sprintf("%v", e)), 0644)
@@ -415,9 +420,16 @@ func main() {
 		http.NotFound(w, r)
 	})
 
-	// start server
+	// start server with timeouts to prevent hung connections leaking memory
 	log.Printf("Server starting on http://localhost:%d", config.Port)
-	if err := http.ListenAndServe(fmt.Sprintf(":%d", config.Port), nil); err != nil {
+	srv := &http.Server{
+		Addr:           fmt.Sprintf(":%d", config.Port),
+		ReadTimeout:    15 * time.Second,
+		WriteTimeout:   30 * time.Second,
+		IdleTimeout:    60 * time.Second,
+		MaxHeaderBytes: 1 << 20, // 1MB header limit
+	}
+	if err := srv.ListenAndServe(); err != nil {
 		log.Fatalf("Server failed: %v", err)
 	}
 }
