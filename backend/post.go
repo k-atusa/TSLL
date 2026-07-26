@@ -134,13 +134,13 @@ func generateAnonHandle(seed int64) string {
 	return fmt.Sprintf("익명#%s", randHex)
 }
 
-var mu sync.Mutex                      // For synchronizing post creations and deletions
+var mu sync.RWMutex                    // For synchronizing post creations and deletions
 var uploadSem = make(chan struct{}, 8) // Limit concurrent uploads to prevent disk overflow
 
 // get posts
 func handleGetPosts(w http.ResponseWriter, r *http.Request) {
-	mu.Lock()
-	defer mu.Unlock()
+	mu.RLock()
+	defer mu.RUnlock()
 
 	// read posts
 	postsDir := filepath.Join(config.PostDir, "posts")
@@ -267,8 +267,8 @@ func handleCreatePost(w http.ResponseWriter, r *http.Request) {
 
 // get storage stats
 func handleGetStats(w http.ResponseWriter, r *http.Request) {
-	mu.Lock()
-	defer mu.Unlock()
+	mu.RLock()
+	defer mu.RUnlock()
 
 	usedSize, _ := getDirSize(config.PostDir)
 
