@@ -22,6 +22,7 @@ type miniPost struct {
 	Files     []string `json:"files"`
 }
 
+// === post data structure ===
 type Comment struct {
 	ID        string `json:"id"`
 	Handle    string `json:"handle"`
@@ -35,32 +36,16 @@ type Attachment struct {
 }
 
 type Post struct {
-	ID        string    `json:"id"`
-	Handle    string    `json:"handle,omitempty"`
-	Title     string    `json:"title"`
-	Body      string    `json:"body"`
-	Files     []string  `json:"files"`
+	ID          string       `json:"id"`
+	Handle      string       `json:"handle,omitempty"`
+	Title       string       `json:"title"`
+	Body        string       `json:"body"`
+	Files       []string     `json:"files"`
 	Attachments []Attachment `json:"attachments,omitempty"`
-	CreatedAt int64     `json:"createdAt"`
-	Likes     int       `json:"likes"`
-	Dislikes  int       `json:"dislikes"`
-	Comments  []Comment `json:"comments"`
-}
-
-func normalizeHandle(handle string) string {
-	handle = strings.TrimSpace(handle)
-	if handle == "" {
-		return ""
-	}
-	return strings.Replace(handle, "Anon#", "익명#", 1)
-}
-
-func generateAnonHandle(seed int64) string {
-	randHex := fmt.Sprintf("%x", seed)
-	if len(randHex) > 4 {
-		randHex = randHex[len(randHex)-4:]
-	}
-	return fmt.Sprintf("익명#%s", randHex)
+	CreatedAt   int64        `json:"createdAt"`
+	Likes       int          `json:"likes"`
+	Dislikes    int          `json:"dislikes"`
+	Comments    []Comment    `json:"comments"`
 }
 
 type StorageStats struct {
@@ -70,9 +55,7 @@ type StorageStats struct {
 	FileCount int   `json:"fileCount"`
 }
 
-var mu sync.Mutex // For synchronizing post creations and deletions
-
-// get directory size
+// === ensure directory capacity ===
 func getDirSize(path string) (int64, error) {
 	var size int64
 	err := filepath.Walk(path, func(_ string, info os.FileInfo, err error) error {
@@ -87,7 +70,6 @@ func getDirSize(path string) (int64, error) {
 	return size, err
 }
 
-// enforce directory capacity
 func enforceCapacity() {
 	size, err := getDirSize(config.PostDir)
 	if err != nil {
@@ -147,10 +129,30 @@ func enforceCapacity() {
 	}
 }
 
+// === control user handles ===
+func normalizeHandle(handle string) string {
+	handle = strings.TrimSpace(handle)
+	if handle == "" {
+		return ""
+	}
+	return strings.Replace(handle, "Anon#", "익명#", 1)
+}
+
+func generateAnonHandle(seed int64) string {
+	randHex := fmt.Sprintf("%x", seed)
+	if len(randHex) > 4 {
+		randHex = randHex[len(randHex)-4:]
+	}
+	return fmt.Sprintf("익명#%s", randHex)
+}
+
+var mu sync.RWMutex                    // For synchronizing post creations and deletions
+var uploadSem = make(chan struct{}, 8) // Limit concurrent uploads to prevent disk overflow
+
 // get posts
 func handleGetPosts(w http.ResponseWriter, r *http.Request) {
-	mu.Lock()
-	defer mu.Unlock()
+	mu.RLock()
+	defer mu.RUnlock()
 
 	// read posts
 	postsDir := filepath.Join(config.PostDir, "posts")
@@ -206,7 +208,7 @@ func handleGetPostDetail(w http.ResponseWriter, r *http.Request) {
 
 // create post
 func handleCreatePost(w http.ResponseWriter, r *http.Request) {
-	r.Body = http.MaxBytesReader(w, r.Body, config.PostCap) // prevent too large file
+	r.Body = http.MaxBytesReader(w, r.Body, config.MaxSize) // prevent too large file
 	if err := r.ParseMultipartForm(2 * 1048576); err != nil {
 		http.Error(w, "File too large or parse error", http.StatusBadRequest)
 		return
@@ -220,6 +222,10 @@ func handleCreatePost(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "Title is required", http.StatusBadRequest)
 		return
 	}
+
+	// limit concurrent disk writes
+	uploadSem <- struct{}{}
+	defer func() { <-uploadSem }()
 
 	// generate id, create post
 	id := fmt.Sprintf("%d", time.Now().UnixNano())
@@ -273,8 +279,8 @@ func handleCreatePost(w http.ResponseWriter, r *http.Request) {
 
 // get storage stats
 func handleGetStats(w http.ResponseWriter, r *http.Request) {
-	mu.Lock()
-	defer mu.Unlock()
+	mu.RLock()
+	defer mu.RUnlock()
 
 	usedSize, _ := getDirSize(config.PostDir)
 
@@ -300,39 +306,6 @@ func handleGetStats(w http.ResponseWriter, r *http.Request) {
 
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(stats)
-}
-
-// handle post like/upvote
-func handleLikePost(w http.ResponseWriter, r *http.Request) {
-	mu.Lock()
-	defer mu.Unlock()
-
-	id := strings.TrimPrefix(r.URL.Path, "/api/com/posts/")
-	id = strings.TrimSuffix(id, "/like")
-	if id == "" || filepath.Base(id) != id {
-		http.Error(w, "Invalid post ID", http.StatusBadRequest)
-		return
-	}
-
-	postPath := filepath.Join(config.PostDir, "posts", id+".json")
-	data, err := os.ReadFile(postPath)
-	if err != nil {
-		http.Error(w, "Post not found", http.StatusNotFound)
-		return
-	}
-
-	var p Post
-	if err := json.Unmarshal(data, &p); err != nil {
-		http.Error(w, "Corrupt post data", http.StatusInternalServerError)
-		return
-	}
-
-	p.Likes++
-	updatedData, _ := json.Marshal(p)
-	os.WriteFile(postPath, updatedData, 0644)
-
-	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(p)
 }
 
 // handle add comment to post
@@ -382,6 +355,39 @@ func handleCreateComment(w http.ResponseWriter, r *http.Request) {
 	}
 
 	p.Comments = append(p.Comments, comment)
+	updatedData, _ := json.Marshal(p)
+	os.WriteFile(postPath, updatedData, 0644)
+
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(p)
+}
+
+// handle post like/upvote
+func handleLikePost(w http.ResponseWriter, r *http.Request) {
+	mu.Lock()
+	defer mu.Unlock()
+
+	id := strings.TrimPrefix(r.URL.Path, "/api/com/posts/")
+	id = strings.TrimSuffix(id, "/like")
+	if id == "" || filepath.Base(id) != id {
+		http.Error(w, "Invalid post ID", http.StatusBadRequest)
+		return
+	}
+
+	postPath := filepath.Join(config.PostDir, "posts", id+".json")
+	data, err := os.ReadFile(postPath)
+	if err != nil {
+		http.Error(w, "Post not found", http.StatusNotFound)
+		return
+	}
+
+	var p Post
+	if err := json.Unmarshal(data, &p); err != nil {
+		http.Error(w, "Corrupt post data", http.StatusInternalServerError)
+		return
+	}
+
+	p.Likes++
 	updatedData, _ := json.Marshal(p)
 	os.WriteFile(postPath, updatedData, 0644)
 
