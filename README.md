@@ -62,14 +62,23 @@ FalseCrypt-server/
 
 ### Option 1. Download Pre-built Binary (All-in-One Standalone Execution)
 
-Download the pre-built `fcinside` binary to run the entire application (Web Interface + Backend API) out-of-the-box in a single file without needing Node.js, Go, or build steps.
+Download the pre-built `fcinside` binary matching your Operating System and CPU architecture from [GitHub Releases](https://github.com/k-atusa/FalseCrypt-server/releases) to run the entire application (Web Interface + Backend API) out-of-the-box without needing Node.js, Go, or build steps.
 
-1. **Download Binary**: Fetch the `fcinside` binary from [GitHub Releases](https://github.com/k-atusa/FalseCrypt-server/releases) or build artifacts.
-2. **Run Server**:
-   ```bash
-   chmod +x fcinside
-   ./fcinside
-   ```
+| Platform | Architecture | Binary Name |
+| :--- | :--- | :--- |
+| **Linux** | `amd64` (x86_64) | `fcinside-linux-amd64` |
+| **Linux** | `arm64` (ARM64 / Raspberry Pi) | `fcinside-linux-arm64` |
+| **macOS** | `arm64` (Apple Silicon M1/M2/M3/M4) | `fcinside-darwin-arm64` |
+| **macOS** | `amd64` (Intel) | `fcinside-darwin-amd64` |
+| **Windows** | `amd64` (x86_64) | `fcinside-windows-amd64.exe` |
+| **Windows** | `arm64` (ARM64) | `fcinside-windows-arm64.exe` |
+
+#### Run Server Example (Linux / macOS):
+```bash
+chmod +x fcinside-linux-amd64
+./fcinside-linux-amd64
+```
+
 > **All-in-One Single Execution**: Web UI and backend API run instantly on [http://localhost:4000](http://localhost:4000).
 
 ---
