@@ -136,17 +136,6 @@ npm run dev
 | `caps` | `int[]` | Chunk storage directory capacity limits |
 | `weights` | `float[]` | Chunk storage preference weights |
 | `wrkey` | `string` | Write/delete request authorization key |
-
-### 3. Environment Variables
-
-You can override default settings via environment variables in `docker-compose.yml` or runtime environment:
-
-- `PORT`: HTTP server port (e.g. `4000`)
-- `POST_CAP`: Total post storage cap (e.g. `100MB`, `1GB`, `500M`)
-- `CHUNK_CAP`: Total chunk store storage cap (e.g. `1GB`, `10GB`)
-- `MAX_SIZE`: Maximum request upload body size (e.g. `512MB`, `1GB`)
-- `BACKEND_URL`: Backend API URL referenced by frontend (e.g. `http://backend:4000`)
-
 ---
 
 ## 📡 API Endpoints Overview
