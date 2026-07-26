@@ -356,8 +356,8 @@ func main() {
 		}
 	}()
 
+	// initialize env, set CORS
 	initEnv()
-
 	enableCORS := func(w http.ResponseWriter, r *http.Request) bool {
 		w.Header().Set("Access-Control-Allow-Origin", "*")
 		w.Header().Set("Access-Control-Allow-Methods", "GET, POST, OPTIONS, PUT, DELETE")
@@ -421,6 +421,7 @@ func main() {
 	})
 
 	// register chunk handlers
+	log.Println("initializing FalseCrypt ChunkServer...")
 	cs, err := initCS()
 	if err == nil {
 		registerFCs(cs)

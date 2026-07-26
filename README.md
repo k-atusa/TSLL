@@ -1,14 +1,10 @@
 # FalseCrypt-server
 
-project USAG: FalseCrypt server
-
-> FalseCrypt-server is simple posting blog and datachunk backend
-
----
-
 ## 📋 Overview
 
-**FalseCrypt-server** is an all-in-one backend and frontend solution providing a **Community Posting Blog**, a **Chunk-based Datastore Backend for the FalseCrypt application**, and an intuitive **Next.js Web Interface** with support for **Standalone Single-Binary Deployment**.
+> project USAG: FalseCrypt server v2.1.1
+
+**FalseCrypt-server** is an all-in-one backend and frontend solution providing a **Community Posting Blog**, a **Chunk-based Datastore Backend for the FalseCrypt**, and an intuitive **Next.js Web Interface** with support for **Standalone Single-Binary Deployment**.
 
 ### 🌟 Key Features
 
@@ -19,7 +15,7 @@ project USAG: FalseCrypt server
 
 2. **FalseCrypt Datachunk Backend**
    - Account profile data storage and authentication verification.
-   - CID (Content ID)-based chunk block read, write, delete, and integrity verification (Checksum & Auth).
+   - CID based block read, write, delete, and integrity verification (Checksum & Auth).
    - BloomFilter support for checking chunk existence and pruning (`trimchunk`, `trimempty`).
 
 3. **Modern Next.js Web UI & Standalone Export**

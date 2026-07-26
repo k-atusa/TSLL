@@ -10,9 +10,8 @@ permissions:
   contents: write
 
 jobs:
-  build:
+  frontend:
     runs-on: ubuntu-latest
-
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
@@ -24,33 +23,81 @@ jobs:
           cache: 'npm'
           cache-dependency-path: frontend/package-lock.json
 
-      - name: Setup Go
-        uses: actions/setup-go@v5
-        with:
-          go-version: '1.24'
-
       - name: Build Frontend Static Export
         run: |
           cd frontend
           npm ci
           npm run build
 
-      - name: Copy Export & Build Go Binary
+      - name: Upload Frontend Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: frontend-out
+          path: frontend/out
+
+  build:
+    needs: frontend
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        include:
+          - goos: linux
+            goarch: amd64
+            suffix: ""
+          - goos: windows
+            goarch: amd64
+            suffix: ".exe"
+          - goos: darwin
+            goarch: amd64
+            suffix: ""
+          - goos: darwin
+            goarch: arm64
+            suffix: ""
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: '1.26'
+
+      - name: Download Frontend Artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: frontend-out
+          path: backend/out
+
+      - name: Build Go Binary
+        env:
+          GOOS: ${{ matrix.goos }}
+          GOARCH: ${{ matrix.goarch }}
+          CGO_ENABLED: "0"
         run: |
-          cp -r frontend/out backend/out
           cd backend
-          go build -ldflags="-s -w" -trimpath -o fcinside .
+          go build -ldflags="-s -w" -trimpath -o fcserver-${{ matrix.goos }}-${{ matrix.goarch }}${{ matrix.suffix }} .
 
       - name: Upload Binary Artifact
         uses: actions/upload-artifact@v4
         with:
-          name: fcinside
-          path: backend/fcinside
+          name: fcserver-${{ matrix.goos }}-${{ matrix.goarch }}
+          path: backend/fcserver-${{ matrix.goos }}-${{ matrix.goarch }}${{ matrix.suffix }}
 
-      - name: Create GitHub Release Asset
-        if: startsWith(github.ref, 'refs/tags/')
+  release:
+    needs: build
+    runs-on: ubuntu-latest
+    if: startsWith(github.ref, 'refs/tags/')
+    steps:
+      - name: Download All Artifacts
+        uses: actions/download-artifact@v4
+        with:
+          pattern: fcserver-*
+          merge-multiple: true
+
+      - name: Create GitHub Release
         uses: softprops/action-gh-release@v2
         with:
-          files: backend/fcinside
+          files: fcserver-*
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
