@@ -2,10 +2,12 @@
 package main
 
 import (
+	"embed"
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
 	"io"
+	"io/fs"
 	"log"
 	"net/http"
 	"os"
@@ -16,6 +18,9 @@ import (
 	"github.com/k-atusa/USAG-Lib/Bencrypt"
 	"github.com/taewook427/USAG-KOX/FalseCrypt"
 )
+
+//go:embed all:out
+var outFS embed.FS
 
 type Config struct {
 	// blog server
@@ -422,6 +427,68 @@ func main() {
 	} else {
 		log.Fatalf("Failed to init chunk server: %v", err)
 	}
+
+	// Serve Next.js exported static frontend
+	subFS, err := fs.Sub(outFS, "out")
+	if err != nil {
+		log.Fatalf("Failed to load embedded frontend assets: %v", err)
+	}
+	staticServer := http.FileServer(http.FS(subFS))
+
+	http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
+		if strings.HasPrefix(r.URL.Path, "/api/") {
+			http.NotFound(w, r)
+			return
+		}
+
+		reqPath := strings.TrimPrefix(r.URL.Path, "/")
+		if reqPath == "" {
+			reqPath = "index.html"
+		}
+
+		// Direct file check
+		if f, err := subFS.Open(reqPath); err == nil {
+			f.Close()
+			staticServer.ServeHTTP(w, r)
+			return
+		}
+
+		// Check reqPath + ".html" (e.g. /posts/new -> posts/new.html)
+		if fHtml, err := subFS.Open(reqPath + ".html"); err == nil {
+			fHtml.Close()
+			r.URL.Path = r.URL.Path + ".html"
+			staticServer.ServeHTTP(w, r)
+			return
+		}
+
+		// Fallback for Next.js App Router dynamic post detail route (/posts/[id])
+		if strings.HasPrefix(reqPath, "posts/") && !strings.HasPrefix(reqPath, "posts/new") {
+			if strings.HasSuffix(reqPath, ".txt") {
+				if fTxt, err := subFS.Open("posts/preview.txt"); err == nil {
+					defer fTxt.Close()
+					w.Header().Set("Content-Type", "text/plain; charset=utf-8")
+					io.Copy(w, fTxt)
+					return
+				}
+			}
+			if fDetail, err := subFS.Open("posts/preview.html"); err == nil {
+				defer fDetail.Close()
+				w.Header().Set("Content-Type", "text/html; charset=utf-8")
+				io.Copy(w, fDetail)
+				return
+			}
+		}
+
+		// Fallback to index.html
+		if indexFile, err := subFS.Open("index.html"); err == nil {
+			defer indexFile.Close()
+			w.Header().Set("Content-Type", "text/html; charset=utf-8")
+			io.Copy(w, indexFile)
+			return
+		}
+
+		http.NotFound(w, r)
+	})
 
 	// start server
 	log.Printf("Server starting on http://localhost:%d", config.Port)

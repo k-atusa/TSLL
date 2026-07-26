@@ -8,7 +8,7 @@ project USAG: FalseCrypt server
 
 ## 📋 Overview
 
-**FalseCrypt-server** is an all-in-one backend and frontend solution providing a **Community Posting Blog**, a **Chunk-based Datastore Backend for the FalseCrypt application**, and an intuitive **Next.js Web Interface**.
+**FalseCrypt-server** is an all-in-one backend and frontend solution providing a **Community Posting Blog**, a **Chunk-based Datastore Backend for the FalseCrypt application**, and an intuitive **Next.js Web Interface** with support for **Standalone Single-Binary Deployment**.
 
 ### 🌟 Key Features
 
@@ -22,20 +22,17 @@ project USAG: FalseCrypt server
    - CID (Content ID)-based chunk block read, write, delete, and integrity verification (Checksum & Auth).
    - BloomFilter support for checking chunk existence and pruning (`trimchunk`, `trimempty`).
 
-3. **Modern Web UI**
-   - Built with Next.js 16, React 19, TypeScript, and Tailwind CSS for a sleek community experience.
-   - Real-time storage capacity gauge and media previews.
-
-4. **Docker & Docker Compose Integration**
-   - Easily build and run both the Go backend and Next.js frontend with single container orchestration commands.
+3. **Modern Next.js Web UI & Standalone Export**
+   - Built with Next.js 16, React 19, TypeScript, and Tailwind CSS.
+   - **Next.js Static Export (`output: "export"`)**: Compiles the entire Next.js frontend into static HTML/CSS/JS assets (`frontend/out`).
+   - **Go Embedded Server**: The Go backend embeds `out/` via `go:embed` and serves both the web interface and API from a single lightweight executable binary—no Docker or Node.js runtime required at production runtime!
 
 ---
 
 ## 🛠 Tech Stack
 
-- **Backend**: [Go (Golang)](https://go.dev/), HTTP Standard Library, `USAG-Lib/Bencrypt`, `USAG-KOX/FalseCrypt`
+- **Backend**: [Go (Golang)](https://go.dev/), `go:embed`, HTTP Standard Library, `USAG-Lib/Bencrypt`, `USAG-KOX/FalseCrypt`
 - **Frontend**: [Next.js 16](https://nextjs.org/) (App Router), React 19, TypeScript, Tailwind CSS, Lucide React
-- **Deployment**: Docker, Docker Compose
 
 ---
 
@@ -43,86 +40,77 @@ project USAG: FalseCrypt server
 
 ```text
 FalseCrypt-server/
-├── backend/                  # Go backend server
-│   ├── main.go               # HTTP server, routing, config loading
+├── backend/                  # Go backend server (embeds frontend static export)
+│   ├── main.go               # HTTP server, API routing, embedded static file server
 │   ├── post.go               # Post management, comments, storage cap auto-pruning
 │   ├── store.go              # FalseCrypt chunk store integration
+│   ├── out/                  # Next.js static export build (embedded via go:embed)
 │   ├── config.json           # Backend server configuration file
-│   ├── chunkmeta.json        # Chunk store metadata configuration file
-│   └── Dockerfile            # Backend Dockerfile
+│   └── chunkmeta.json        # Chunk store metadata configuration file
 ├── frontend/                 # Next.js web frontend
-│   ├── app/                  # App Router main pages & layout
-│   ├── components/           # UI components (PostModal, DetailModal, etc.)
-│   ├── lib/                  # Backend API client utilities
-│   └── Dockerfile            # Frontend Dockerfile
-├── docker-compose.yml        # Multi-container orchestration
+│   ├── app/                  # App Router pages & layout
+│   ├── components/           # React UI components
+│   ├── next.config.ts        # Next.js config (configured with output: "export")
+│   └── package.json
 ├── LICENSE.txt               # GPL-3.0 License
 └── README.md                 # Project documentation
 ```
 
 ---
 
-## 🚀 Installation & Getting Started
+## 🚀 Build & Deployment Guide
 
-### Option 1. Using Docker Compose (Recommended)
+### Option 1. Download Pre-built Binary (All-in-One Standalone Execution)
 
-The quickest way to run the complete service stack:
+Download the pre-built `fcinside` binary to run the entire application (Web Interface + Backend API) out-of-the-box in a single file without needing Node.js, Go, or build steps.
 
-```bash
-# 1. Clone the repository
-git clone https://github.com/k-atusa/FalseCrypt-server.git
-cd FalseCrypt-server
-
-# 2. Start services with Docker Compose
-docker compose up -d
-```
-
-Access the services via browser:
-- **Web Frontend UI**: [http://localhost:3000](http://localhost:3000)
-- **Backend API**: [http://localhost:4000](http://localhost:4000)
-
-Stop containers:
-```bash
-docker compose down
-```
+1. **Download Binary**: Fetch the `fcinside` binary from [GitHub Releases](https://github.com/k-atusa/FalseCrypt-server/releases) or build artifacts.
+2. **Run Server**:
+   ```bash
+   chmod +x fcinside
+   ./fcinside
+   ```
+> **All-in-One Single Execution**: Web UI and backend API run instantly on [http://localhost:4000](http://localhost:4000).
 
 ---
 
-### Option 2. Local Manual Setup (Development)
+### Option 2. Manual Standalone Build
+
+To compile the `fcinside` executable manually from source:
+
+```bash
+# 1. Export Next.js frontend & sync to backend
+cd frontend
+npm install
+npm run build     # Generates frontend/out and syncs backend/out
+
+# 2. Build standalone Go backend binary
+cd ../backend
+go build -ldflags="-s -w" -trimpath -o fcinside .
+
+# 3. Run single server binary
+./fcinside
+```
+
+Access the application directly in your browser:
+- **Web UI & API**: [http://localhost:4000](http://localhost:4000)
+
+---
+
+### Option 2. Development Setup
 
 #### 1) Run Backend (Go)
-
-**Prerequisites**: Go 1.22+ installed
-
 ```bash
 cd backend
-
-# Tidy dependencies
-go mod tidy
-
-# Build backend server executable
-go build -ldflags="-s -w" -trimpath -o server main.go post.go store.go
-
-# Run server
-./server
+go run main.go post.go store.go
 ```
-> `config.json` and `chunkmeta.json` will be automatically generated with default values if not present.
 
-#### 2) Run Frontend (Next.js)
-
-**Prerequisites**: Node.js 18+ and npm installed
-
+#### 2) Run Frontend (Next.js Dev Server)
 ```bash
 cd frontend
-
-# Install dependencies
-npm install
-
-# Run development server
 npm run dev
 ```
-
-Open [http://localhost:3000](http://localhost:3000) in your browser.
+> `config.json` and `chunkmeta.json` will be automatically generated with default values if not present.
 
 ---
 
