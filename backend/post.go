@@ -9,11 +9,18 @@ import (
 	"net/http"
 	"os"
 	"path/filepath"
+	"runtime/debug"
 	"sort"
 	"strings"
 	"sync"
 	"time"
 )
+
+type miniPost struct {
+	ID        string   `json:"id"`
+	CreatedAt int64    `json:"createdAt"`
+	Files     []string `json:"files"`
+}
 
 // === post data structure ===
 type Comment struct {
@@ -70,6 +77,7 @@ func enforceCapacity() {
 		return
 	}
 
+	cleaned := false
 	for size > config.PostCap {
 		log.Printf("Current size (%d) exceeds capacity (%d). Cleaning up...", size, config.PostCap)
 		postsDir := filepath.Join(config.PostDir, "posts")
@@ -78,8 +86,8 @@ func enforceCapacity() {
 			break // Nothing to delete or error
 		}
 
-		// load posts
-		var posts []Post
+		// load lightweight posts
+		var posts []miniPost
 		for _, f := range files {
 			if !strings.HasSuffix(f.Name(), ".json") {
 				continue
@@ -89,7 +97,7 @@ func enforceCapacity() {
 			if err != nil {
 				continue
 			}
-			var p Post
+			var p miniPost
 			if err := json.Unmarshal(data, &p); err == nil {
 				posts = append(posts, p)
 			}
@@ -110,10 +118,14 @@ func enforceCapacity() {
 		for _, fname := range oldest.Files {
 			os.Remove(filepath.Join(config.PostDir, "files", fname))
 		}
+		cleaned = true
 		size, err = getDirSize(config.PostDir)
 		if err != nil {
 			break
 		}
+	}
+	if cleaned {
+		debug.FreeOSMemory()
 	}
 }
 
@@ -197,7 +209,7 @@ func handleGetPostDetail(w http.ResponseWriter, r *http.Request) {
 // create post
 func handleCreatePost(w http.ResponseWriter, r *http.Request) {
 	r.Body = http.MaxBytesReader(w, r.Body, config.MaxSize) // prevent too large file
-	if err := r.ParseMultipartForm(64 * 1048576); err != nil {
+	if err := r.ParseMultipartForm(2 * 1048576); err != nil {
 		http.Error(w, "File too large or parse error", http.StatusBadRequest)
 		return
 	}

@@ -44,8 +44,14 @@ jobs:
           - goos: linux
             goarch: amd64
             suffix: ""
+          - goos: linux
+            goarch: arm64
+            suffix: ""
           - goos: windows
             goarch: amd64
+            suffix: ".exe"
+          - goos: windows
+            goarch: arm64
             suffix: ".exe"
           - goos: darwin
             goarch: amd64
@@ -76,13 +82,13 @@ jobs:
           CGO_ENABLED: "0"
         run: |
           cd backend
-          go build -ldflags="-s -w" -trimpath -o fcserver-${{ matrix.goos }}-${{ matrix.goarch }}${{ matrix.suffix }} .
+          go build -ldflags="-s -w" -trimpath -o fcinside-${{ matrix.goos }}-${{ matrix.goarch }}${{ matrix.suffix }} .
 
       - name: Upload Binary Artifact
         uses: actions/upload-artifact@v4
         with:
-          name: fcserver-${{ matrix.goos }}-${{ matrix.goarch }}
-          path: backend/fcserver-${{ matrix.goos }}-${{ matrix.goarch }}${{ matrix.suffix }}
+          name: fcinside-${{ matrix.goos }}-${{ matrix.goarch }}
+          path: backend/fcinside-${{ matrix.goos }}-${{ matrix.goarch }}${{ matrix.suffix }}
 
   release:
     needs: build
@@ -92,12 +98,12 @@ jobs:
       - name: Download All Artifacts
         uses: actions/download-artifact@v4
         with:
-          pattern: fcserver-*
+          pattern: fcinside-*
           merge-multiple: true
 
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v2
         with:
-          files: fcserver-*
+          files: fcinside-*
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
