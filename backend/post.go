@@ -60,14 +60,27 @@ func defaultFCIMeta() FCIMeta {
 // initFCI loads or creates fcimeta.json and ensures all gallery directories exist.
 func initFCI() {
 	metaPath := config.FCIMeta
+	if metaPath == "" {
+		metaPath = "./fcimeta.json"
+		config.FCIMeta = metaPath
+	}
+
 	data, err := os.ReadFile(metaPath)
 	if os.IsNotExist(err) {
 		fciMeta = defaultFCIMeta()
-		out, _ := json.MarshalIndent(fciMeta, "", "  ")
+		out, err := json.MarshalIndent(fciMeta, "", "  ")
+		if err != nil {
+			log.Fatalf("FCInside: failed to marshal default fcimeta: %v", err)
+		}
+		if dir := filepath.Dir(metaPath); dir != "." && dir != "" {
+			if mkdirErr := os.MkdirAll(dir, 0755); mkdirErr != nil {
+				log.Fatalf("FCInside: failed to create directory for fcimeta '%s': %v", dir, mkdirErr)
+			}
+		}
 		if writeErr := os.WriteFile(metaPath, out, 0644); writeErr != nil {
 			log.Fatalf("FCInside: failed to write fcimeta.json: %v", writeErr)
 		}
-		log.Println("Created fcimeta:", metaPath)
+		log.Println("Created default fcimeta:", metaPath)
 	} else if err != nil {
 		log.Fatalf("FCInside: failed to read fcimeta.json: %v", err)
 	} else {
