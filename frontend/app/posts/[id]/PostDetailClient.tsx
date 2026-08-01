@@ -35,7 +35,6 @@ import {
   addComment,
 } from "@/lib/api";
 import { Comment, Post } from "@/lib/types";
-import { getGalleryDisplayName } from "@/lib/constants";
 
 interface PageProps {
   params: Promise<{ id: string }>;
@@ -276,9 +275,9 @@ export default function PostDetailClient({ params }: PageProps) {
             <span>목록으로</span>
           </Link>
 
-          {categoryTag && (
+          {post.gallery && (
             <span className="px-2.5 py-1 rounded-sm bg-cyan-500/10 text-cyan-400 border border-cyan-500/30 font-sans text-xs font-semibold">
-              {getGalleryDisplayName(categoryTag)}
+              {post.gallery}
             </span>
           )}
         </div>

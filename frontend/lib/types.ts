@@ -12,6 +12,7 @@ export interface PostAttachment {
 
 export interface Post {
   id: string;
+  gallery: string; // gallery ID this post belongs to
   handle?: string;
   title: string;
   body: string;
@@ -30,6 +31,14 @@ export interface StorageStats {
   fileCount: number;
 }
 
-export type BoardCategory = 'all' | 'hot' | 'general' | 'crypto' | 'tech' | 'news' | 'files';
+export interface GalleryInfo {
+  id: string;
+  name: string;
+  shortName: string;
+  icon: string;
+}
+
+// BoardCategory is "all" | "hot" | or a dynamic gallery ID string
+export type BoardCategory = string;
 
 export type SortMode = 'latest' | 'popular';

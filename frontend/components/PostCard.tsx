@@ -24,7 +24,6 @@ import {
   normalizeAnonHandle,
 } from "@/lib/api";
 
-import { getGalleryDisplayName } from "@/lib/constants";
 
 interface PostCardProps {
   post: Post;
@@ -45,10 +44,8 @@ export const PostCard: React.FC<PostCardProps> = ({ post }) => {
   const imageFiles = post.files?.filter((f) => isImageFile(f)) || [];
   const otherFiles = post.files?.filter((f) => !isImageFile(f)) || [];
 
-  // Extract tag from title if present like "[Crypto] ZK Proofs"
-  const tagMatch = post.title.match(/^\[(.*?)\]/);
-  const categoryTag = tagMatch ? tagMatch[1] : null;
-  const cleanTitle = tagMatch ? post.title.replace(/^\[.*?\]\s*/, "") : post.title;
+  const categoryTag = post.gallery || null;
+  const displayTitle = post.title?.trim() || "(제목 없음)";
 
   const handleUpvote = async (e: React.MouseEvent) => {
     e.preventDefault();
@@ -114,7 +111,7 @@ export const PostCard: React.FC<PostCardProps> = ({ post }) => {
                   </span>
                   {categoryTag && (
                     <span className="px-2 py-0.5 text-xs font-sans font-medium rounded-sm bg-cyan-500/10 text-cyan-400 border border-cyan-500/30">
-                      {getGalleryDisplayName(categoryTag)}
+                      {categoryTag}
                     </span>
                   )}
                 </div>
@@ -125,7 +122,7 @@ export const PostCard: React.FC<PostCardProps> = ({ post }) => {
 
           {/* Title */}
           <h3 className="text-lg md:text-xl font-bold text-slate-100 group-hover:text-white mb-2 leading-snug tracking-tight">
-            {cleanTitle}
+            {displayTitle}
           </h3>
 
           {/* Body preview */}

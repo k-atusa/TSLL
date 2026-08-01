@@ -22,6 +22,7 @@ import {
   isVideoFile,
   getCleanFileName,
   normalizeAnonHandle,
+  sanitizeText,
 } from "@/lib/api";
 import { PostBodyContent } from "@/components/PostBodyContent";
 
@@ -72,16 +73,17 @@ export const PostDetailModal: React.FC<PostDetailModalProps> = ({ post, onClose 
 
   const handleAddComment = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!newCommentBody.trim()) return;
+    const cleanBody = sanitizeText(newCommentBody).trim();
+    if (!cleanBody) return;
 
-    const submittedHandle = newCommentHandle.trim();
+    const submittedHandle = sanitizeText(newCommentHandle).trim();
     const myAnon = submittedHandle ? { handle: submittedHandle, color: generateAnonId(submittedHandle).color } : generateRandomAnonId();
     setComments((prev) => [
       ...prev,
       {
         id: Date.now().toString(),
         handle: myAnon.handle,
-        body: newCommentBody.trim(),
+        body: cleanBody,
         time: "Just now",
         color: myAnon.color,
       },

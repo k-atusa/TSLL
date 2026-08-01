@@ -21,7 +21,7 @@ interface PostBodyContentProps {
   onImageClick?: (url: string) => void;
 }
 
-const ATTACHMENT_TOKEN_RE = /\[\[attach:([a-zA-Z0-9-]+)\]\]/g;
+const ATTACHMENT_TOKEN_RE = /\[\[attach:([a-zA-Z0-9_-]+)\]\]/g;
 
 interface ResolvedAttachment {
   filename: string;
@@ -44,7 +44,8 @@ function renderInlineParts(
       parts.push(<span key={`text-${index++}`}>{text.slice(lastIndex, match.index)}</span>);
     }
 
-    const attachment = attachmentsById.get(match[1]);
+    const attachmentId = match[1];
+    const attachment = attachmentsById.get(attachmentId);
     if (attachment) {
       const url = attachment.url;
       const isImage = isImageFile(attachment.filename);
@@ -151,7 +152,8 @@ export const PostBodyContent: React.FC<PostBodyContentProps> = ({
     if (!attachmentsById.has(filename)) attachmentsById.set(filename, entry);
   });
 
-  const lines = body.split("\n");
+  const normalizedBody = body.replace(/\r\n/g, "\n").replace(/\r/g, "\n");
+  const lines = normalizedBody.split("\n");
 
   return (
     <div className={className}>

@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useRef } from "react";
+import React, { useState, useRef, useEffect } from "react";
 import {
   X,
   UploadCloud,
@@ -11,8 +11,8 @@ import {
   CheckCircle2,
   AlertCircle,
 } from "lucide-react";
-import { createPost, generateRandomAnonId } from "@/lib/api";
-import { BoardCategory, Post } from "@/lib/types";
+import { createPost, fetchGalleries, generateRandomAnonId, sanitizeText } from "@/lib/api";
+import { BoardCategory, GalleryInfo, Post } from "@/lib/types";
 import { buildAttachmentToken } from "@/lib/api";
 
 interface CreatePostModalProps {
@@ -22,21 +22,14 @@ interface CreatePostModalProps {
   defaultCategory?: BoardCategory;
 }
 
-const CATEGORIES: { id: BoardCategory; label: string; prefix: string }[] = [
-  { id: "general", label: "General", prefix: "[General]" },
-  { id: "crypto", label: "Crypto / ZK", prefix: "[Crypto]" },
-  { id: "tech", label: "Tech / Dev", prefix: "[Tech]" },
-  { id: "news", label: "News / Politics", prefix: "[News]" },
-  { id: "files", label: "File Vault", prefix: "[Files]" },
-];
-
 export const CreatePostModal: React.FC<CreatePostModalProps> = ({
   isOpen,
   onClose,
   onPostCreated,
-  defaultCategory = "general",
+  defaultCategory,
 }) => {
-  const [selectedCategory, setSelectedCategory] = useState<BoardCategory>(defaultCategory);
+  const [galleries, setGalleries] = useState<GalleryInfo[]>([]);
+  const [selectedCategory, setSelectedCategory] = useState<BoardCategory>(defaultCategory ?? "");
   const [nickname, setNickname] = useState("");
   const [title, setTitle] = useState("");
   const [body, setBody] = useState("");
@@ -52,6 +45,19 @@ export const CreatePostModal: React.FC<CreatePostModalProps> = ({
 
   const fileInputRef = useRef<HTMLInputElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
+
+  // Load galleries on open
+  useEffect(() => {
+    if (isOpen) {
+      fetchGalleries().then((list) => {
+        setGalleries(list);
+        // Auto-select first gallery if no default or default is a system category
+        if (!selectedCategory || selectedCategory === "all" || selectedCategory === "hot") {
+          if (list.length > 0) setSelectedCategory(list[0].id);
+        }
+      });
+    }
+  }, [isOpen]);
 
   // Generate transient anon ID for modal preview
   const previewAnon = React.useMemo(() => generateRandomAnonId(), []);
@@ -90,21 +96,22 @@ export const CreatePostModal: React.FC<CreatePostModalProps> = ({
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!title.trim()) {
-      setErrorMsg("Title is required.");
+    const cleanTitle = sanitizeText(title).trim();
+    const cleanBody = sanitizeText(body);
+    const cleanHandle = sanitizeText(nickname).trim();
+
+    const finalTitle = cleanTitle || "(제목 없음)";
+
+    if (!selectedCategory) {
+      setErrorMsg("갤러리를 선택해주세요.");
       return;
     }
 
     setIsSubmitting(true);
     setErrorMsg(null);
 
-    const categoryObj = CATEGORIES.find((c) => c.id === selectedCategory);
-    const categoryPrefix = categoryObj ? `${categoryObj.prefix} ` : "";
-    const finalTitle = title.startsWith("[") ? title : `${categoryPrefix}${title}`;
-    const finalHandle = nickname.trim();
-
     try {
-      const newPost = await createPost(finalTitle, body, attachments, finalHandle || undefined);
+      const newPost = await createPost(selectedCategory, finalTitle, cleanBody, attachments, cleanHandle || undefined);
       onPostCreated(newPost);
       // Reset form
       setNickname("");
@@ -177,26 +184,31 @@ export const CreatePostModal: React.FC<CreatePostModalProps> = ({
           {/* Category Selector */}
           <div>
             <label className="block text-xs font-mono font-medium text-slate-400 mb-2">
-              BOARD CATEGORY
+              GALLERY
             </label>
             <div className="flex flex-wrap gap-2">
-              {CATEGORIES.map((cat) => {
-                const active = selectedCategory === cat.id;
-                return (
-                  <button
-                    key={cat.id}
-                    type="button"
-                    onClick={() => setSelectedCategory(cat.id)}
-                    className={`px-3 py-1.5 rounded-md text-xs font-mono transition-all ${
-                      active
-                        ? "bg-cyan-500 text-slate-950 font-bold shadow-[0_0_12px_rgba(6,182,212,0.3)]"
-                        : "bg-slate-950 text-slate-400 border border-slate-800 hover:text-slate-200"
-                    }`}
-                  >
-                    {cat.label}
-                  </button>
-                );
-              })}
+              {galleries.length === 0 ? (
+                <span className="text-xs text-slate-500 font-mono">갤러리 로딩 중...</span>
+              ) : (
+                galleries.map((g) => {
+                  const active = selectedCategory === g.id;
+                  return (
+                    <button
+                      key={g.id}
+                      type="button"
+                      onClick={() => setSelectedCategory(g.id)}
+                      className={`px-3 py-1.5 rounded-md text-xs font-mono transition-all flex items-center gap-1.5 ${
+                        active
+                          ? "bg-cyan-500 text-slate-950 font-bold shadow-[0_0_12px_rgba(6,182,212,0.3)]"
+                          : "bg-slate-950 text-slate-400 border border-slate-800 hover:text-slate-200"
+                      }`}
+                    >
+                      <span>{g.icon}</span>
+                      <span>{g.name}</span>
+                    </button>
+                  );
+                })
+              )}
             </div>
           </div>
 

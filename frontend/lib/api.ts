@@ -1,4 +1,8 @@
-import { Post, StorageStats } from "./types";
+import { GalleryInfo, Post, StorageStats } from "./types";
+
+// ============================================================
+// Types & Constants
+// ============================================================
 
 export interface AttachmentUpload {
   id: string;
@@ -7,35 +11,14 @@ export interface AttachmentUpload {
 
 const API_BASE = "";
 
-// Helper: Format nanosecond timestamp to YYYY.MM.DD. HH:mm:ss (24h + seconds)
-export function formatFullDate(nanoTimestamp: number): string {
-  if (!nanoTimestamp) return "";
-  const date = new Date(Math.floor(nanoTimestamp / 1_000_000));
-  const YYYY = date.getFullYear();
-  const MM = String(date.getMonth() + 1).padStart(2, "0");
-  const DD = String(date.getDate()).padStart(2, "0");
-  const HH = String(date.getHours()).padStart(2, "0");
-  const mm = String(date.getMinutes()).padStart(2, "0");
-  const ss = String(date.getSeconds()).padStart(2, "0");
-  return `${YYYY}.${MM}.${DD}. ${HH}:${mm}:${ss}`;
+// ============================================================
+// String & Handle Utilities
+// ============================================================
+
+export function sanitizeText(str?: string | null): string {
+  return str || "";
 }
 
-// Helper: Format nanosecond timestamp to relative Korean time string or full date
-export function formatTimeAgo(nanoTimestamp: number): string {
-  if (!nanoTimestamp) return "방금 전";
-  const ms = Math.floor(nanoTimestamp / 1_000_000);
-  const now = Date.now();
-  const diffSec = Math.floor((now - ms) / 1000);
-
-  if (diffSec < 60) return "방금 전";
-  if (diffSec < 3600) return `${Math.floor(diffSec / 60)}분 전`;
-  if (diffSec < 86400) return `${Math.floor(diffSec / 3600)}시간 전`;
-  if (diffSec < 604800) return `${Math.floor(diffSec / 86400)}일 전`;
-
-  return formatFullDate(nanoTimestamp);
-}
-
-// Helper: Generate anonymous tripcode handle (e.g. 익명#75fa) from post/comment ID
 export function generateAnonId(id: string): { handle: string; color: string } {
   let hash = 0;
   for (let i = 0; i < id.length; i++) {
@@ -74,54 +57,36 @@ export function generateRandomAnonId(): { handle: string; color: string } {
   return generateAnonId(seed);
 }
 
-// Helper: Get file URL for serving from Go backend
-export function getFileUrl(filename: string): string {
-  return `${API_BASE}/api/com/files/${encodeURIComponent(filename)}`;
+// ============================================================
+// Date & Formatting Helpers
+// ============================================================
+
+export function formatFullDate(nanoTimestamp: number): string {
+  if (!nanoTimestamp) return "";
+  const date = new Date(Math.floor(nanoTimestamp / 1_000_000));
+  const YYYY = date.getFullYear();
+  const MM = String(date.getMonth() + 1).padStart(2, "0");
+  const DD = String(date.getDate()).padStart(2, "0");
+  const HH = String(date.getHours()).padStart(2, "0");
+  const mm = String(date.getMinutes()).padStart(2, "0");
+  const ss = String(date.getSeconds()).padStart(2, "0");
+  return `${YYYY}.${MM}.${DD}. ${HH}:${mm}:${ss}`;
 }
 
-// Helper: Check if file is image
-export function isImageFile(filename: string): boolean {
-  return /\.(jpeg|jpg|gif|png|webp|svg)$/i.test(filename);
+export function formatTimeAgo(nanoTimestamp: number): string {
+  if (!nanoTimestamp) return "방금 전";
+  const ms = Math.floor(nanoTimestamp / 1_000_000);
+  const now = Date.now();
+  const diffSec = Math.floor((now - ms) / 1000);
+
+  if (diffSec < 60) return "방금 전";
+  if (diffSec < 3600) return `${Math.floor(diffSec / 60)}분 전`;
+  if (diffSec < 86400) return `${Math.floor(diffSec / 3600)}시간 전`;
+  if (diffSec < 604800) return `${Math.floor(diffSec / 86400)}일 전`;
+
+  return formatFullDate(nanoTimestamp);
 }
 
-// Helper: Check if file is video
-export function isVideoFile(filename: string): boolean {
-  return /\.(mp4|webm|ogg|mov)$/i.test(filename);
-}
-
-// Helper: Extract original filename (removing timestamp prefix if present)
-export function getCleanFileName(filename: string): string {
-  const parts = filename.split("_");
-  if (parts.length > 1 && /^\d+$/.test(parts[0])) {
-    return parts.slice(1).join("_");
-  }
-  return filename;
-}
-
-export function buildAttachmentToken(id: string): string {
-  return `[[attach:${id}]]`;
-}
-
-export function stripAttachmentTokens(text: string): string {
-  return text.replace(/\[\[attach:[a-zA-Z0-9-]+\]\]/g, "");
-}
-
-// API: Fetch all posts
-export async function fetchPosts(): Promise<Post[]> {
-  try {
-    const res = await fetch(`${API_BASE}/api/com/posts`, {
-      cache: "no-store",
-    });
-    if (!res.ok) throw new Error(`HTTP error ${res.status}`);
-    const data = await res.json();
-    return data || [];
-  } catch (err) {
-    console.warn("API fetch error, returning empty list", err);
-    return [];
-  }
-}
-
-// Helper: Format byte counts cleanly (e.g. 104857600 -> 100 MB)
 export function formatBytes(bytes: number, decimals = 2): string {
   if (!bytes || bytes <= 0) return "0 B";
   const k = 1024;
@@ -131,7 +96,77 @@ export function formatBytes(bytes: number, decimals = 2): string {
   return `${parseFloat((bytes / Math.pow(k, i)).toFixed(dm))} ${sizes[i]}`;
 }
 
-// API: Fetch backend storage statistics
+// ============================================================
+// File & Attachment Helpers
+// ============================================================
+
+export function getFileUrl(filename: string): string {
+  return `${API_BASE}/api/com/files/${encodeURIComponent(filename)}`;
+}
+
+export function isImageFile(filename: string): boolean {
+  return /\.(jpeg|jpg|gif|png|webp|svg)$/i.test(filename);
+}
+
+export function isVideoFile(filename: string): boolean {
+  return /\.(mp4|webm|ogg|mov)$/i.test(filename);
+}
+
+export function getCleanFileName(filename: string): string {
+  const parts = filename.split("_");
+  if (parts.length > 1 && /^\d+$/.test(parts[0])) {
+    return parts.slice(1).join("_");
+  }
+  return filename;
+}
+
+export function buildAttachmentToken(id: string): string {
+  const cleanId = (id || "").replace(/[^a-zA-Z0-9_-]/g, "");
+  return `[[attach:${cleanId || "file-0"}]]`;
+}
+
+export function stripAttachmentTokens(text: string): string {
+  if (!text) return "";
+  return text.replace(/\[\[attach:[a-zA-Z0-9_-]+\]\]/g, "");
+}
+
+// ============================================================
+// API Requests
+// ============================================================
+
+export async function fetchGalleries(): Promise<GalleryInfo[]> {
+  try {
+    const res = await fetch(`${API_BASE}/api/com/galleries`, {
+      cache: "no-store",
+    });
+    if (!res.ok) throw new Error(`HTTP error ${res.status}`);
+    const data = await res.json();
+    return data || [];
+  } catch (err) {
+    console.warn("API fetchGalleries error, returning empty list", err);
+    return [];
+  }
+}
+
+export async function fetchPosts(
+  gallery = "all",
+  page = 1,
+): Promise<{ posts: Post[]; total: number; page: number }> {
+  try {
+    const params = new URLSearchParams({ gallery, page: String(page) });
+    const res = await fetch(`${API_BASE}/api/com/posts?${params}`, {
+      cache: "no-store",
+    });
+    if (!res.ok) throw new Error(`HTTP error ${res.status}`);
+    const posts: Post[] = (await res.json()) || [];
+    const total = parseInt(res.headers.get("X-Total-Count") ?? "0", 10);
+    return { posts, total, page };
+  } catch (err) {
+    console.warn("API fetch error, returning empty list", err);
+    return { posts: [], total: 0, page };
+  }
+}
+
 export async function fetchStorageStats(): Promise<StorageStats> {
   try {
     const res = await fetch(`${API_BASE}/api/com/stats`, {
@@ -150,7 +185,6 @@ export async function fetchStorageStats(): Promise<StorageStats> {
   }
 }
 
-// API: Fetch post detail
 export async function fetchPostDetail(id: string): Promise<Post | null> {
   try {
     const res = await fetch(`${API_BASE}/api/com/posts/${id}`, {
@@ -164,14 +198,15 @@ export async function fetchPostDetail(id: string): Promise<Post | null> {
   }
 }
 
-// API: Create new post
 export async function createPost(
+  galleryId: string,
   title: string,
   body: string,
   attachments: AttachmentUpload[],
   handle?: string,
 ): Promise<Post> {
   const formData = new FormData();
+  formData.append("gallery", galleryId);
   formData.append("title", title);
   formData.append("body", body);
   if (handle) {
@@ -196,7 +231,6 @@ export async function createPost(
   return await res.json();
 }
 
-// API: Like / Upvote post
 export async function likePost(id: string): Promise<Post> {
   const res = await fetch(`${API_BASE}/api/com/posts/${id}/like`, {
     method: "POST",
@@ -205,7 +239,6 @@ export async function likePost(id: string): Promise<Post> {
   return await res.json();
 }
 
-// API: Dislike / Downvote post
 export async function dislikePost(id: string): Promise<Post> {
   const res = await fetch(`${API_BASE}/api/com/posts/${id}/dislike`, {
     method: "POST",
@@ -214,7 +247,6 @@ export async function dislikePost(id: string): Promise<Post> {
   return await res.json();
 }
 
-// API: Add comment to post
 export async function addComment(id: string, body: string, handle?: string): Promise<Post> {
   const res = await fetch(`${API_BASE}/api/com/posts/${id}/comments`, {
     method: "POST",
