@@ -21,7 +21,7 @@ interface PostBodyContentProps {
   onImageClick?: (url: string) => void;
 }
 
-const ATTACHMENT_TOKEN_RE = /\[\[attach:([a-zA-Z0-9-]+)\]\]/g;
+const ATTACHMENT_TOKEN_RE = /(\\?)(?:\[\[attach:([a-zA-Z0-9_-]+)\]\])/g;
 
 interface ResolvedAttachment {
   filename: string;
@@ -44,55 +44,62 @@ function renderInlineParts(
       parts.push(<span key={`text-${index++}`}>{text.slice(lastIndex, match.index)}</span>);
     }
 
-    const attachment = attachmentsById.get(match[1]);
-    if (attachment) {
-      const url = attachment.url;
-      const isImage = isImageFile(attachment.filename);
-      const isVideo = isVideoFile(attachment.filename);
+    const isEscaped = match[1] === "\\";
+    const attachmentId = match[2];
 
-      if (isImage) {
-        parts.push(
-          <div key={`attachment-${index++}`} className="my-3 w-full overflow-hidden rounded-md border border-slate-800 bg-slate-950/60">
-            <button
-              type="button"
-              onClick={() => onImageClick?.(url)}
-              className="group relative block w-full cursor-zoom-in text-left"
-            >
-              <img
-                src={url}
-                alt={getCleanFileName(attachment.filename)}
-                className="w-full max-h-[28rem] object-contain bg-slate-950"
-              />
-              <span className="absolute inset-0 flex items-center justify-center bg-slate-950/0 text-white opacity-0 transition-opacity group-hover:bg-slate-950/30 group-hover:opacity-100">
-                <Eye className="mr-1.5 h-4 w-4" />
-                확대 보기
-              </span>
-            </button>
-          </div>,
-        );
-      } else if (isVideo) {
-        parts.push(
-          <div key={`attachment-${index++}`} className="my-3 w-full overflow-hidden rounded-md border border-slate-800 bg-slate-950/60">
-            <video controls src={url} className="w-full max-h-[28rem] bg-black object-contain" />
-          </div>,
-        );
-      } else {
-        parts.push(
-          <a
-            key={`attachment-${index++}`}
-            href={url}
-            target="_blank"
-            rel="noreferrer"
-            download={getCleanFileName(attachment.filename)}
-            className="my-3 inline-flex items-center gap-2 rounded-md border border-slate-800 bg-slate-950/80 px-3 py-2 text-xs font-mono text-cyan-300 transition-colors hover:border-cyan-500/50 hover:bg-slate-900"
-          >
-            <Download className="h-3.5 w-3.5 text-cyan-400" />
-            <span className="truncate max-w-[240px]">{getCleanFileName(attachment.filename)}</span>
-          </a>,
-        );
-      }
+    if (isEscaped) {
+      parts.push(<span key={`text-${index++}`}>{`[[attach:${attachmentId}]]`}</span>);
     } else {
-      parts.push(<span key={`text-${index++}`}>{match[0]}</span>);
+      const attachment = attachmentsById.get(attachmentId);
+      if (attachment) {
+        const url = attachment.url;
+        const isImage = isImageFile(attachment.filename);
+        const isVideo = isVideoFile(attachment.filename);
+
+        if (isImage) {
+          parts.push(
+            <div key={`attachment-${index++}`} className="my-3 w-full overflow-hidden rounded-md border border-slate-800 bg-slate-950/60">
+              <button
+                type="button"
+                onClick={() => onImageClick?.(url)}
+                className="group relative block w-full cursor-zoom-in text-left"
+              >
+                <img
+                  src={url}
+                  alt={getCleanFileName(attachment.filename)}
+                  className="w-full max-h-[28rem] object-contain bg-slate-950"
+                />
+                <span className="absolute inset-0 flex items-center justify-center bg-slate-950/0 text-white opacity-0 transition-opacity group-hover:bg-slate-950/30 group-hover:opacity-100">
+                  <Eye className="mr-1.5 h-4 w-4" />
+                  확대 보기
+                </span>
+              </button>
+            </div>,
+          );
+        } else if (isVideo) {
+          parts.push(
+            <div key={`attachment-${index++}`} className="my-3 w-full overflow-hidden rounded-md border border-slate-800 bg-slate-950/60">
+              <video controls src={url} className="w-full max-h-[28rem] bg-black object-contain" />
+            </div>,
+          );
+        } else {
+          parts.push(
+            <a
+              key={`attachment-${index++}`}
+              href={url}
+              target="_blank"
+              rel="noreferrer"
+              download={getCleanFileName(attachment.filename)}
+              className="my-3 inline-flex items-center gap-2 rounded-md border border-slate-800 bg-slate-950/80 px-3 py-2 text-xs font-mono text-cyan-300 transition-colors hover:border-cyan-500/50 hover:bg-slate-900"
+            >
+              <Download className="h-3.5 w-3.5 text-cyan-400" />
+              <span className="truncate max-w-[240px]">{getCleanFileName(attachment.filename)}</span>
+            </a>,
+          );
+        }
+      } else {
+        parts.push(<span key={`text-${index++}`}>{match[0]}</span>);
+      }
     }
 
     lastIndex = match.index + match[0].length;
@@ -151,7 +158,8 @@ export const PostBodyContent: React.FC<PostBodyContentProps> = ({
     if (!attachmentsById.has(filename)) attachmentsById.set(filename, entry);
   });
 
-  const lines = body.split("\n");
+  const normalizedBody = body.replace(/\r\n/g, "\n").replace(/\r/g, "\n");
+  const lines = normalizedBody.split("\n");
 
   return (
     <div className={className}>

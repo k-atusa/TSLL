@@ -11,7 +11,7 @@ import {
   CheckCircle2,
   AlertCircle,
 } from "lucide-react";
-import { createPost, fetchGalleries, generateRandomAnonId } from "@/lib/api";
+import { createPost, fetchGalleries, generateRandomAnonId, sanitizeText } from "@/lib/api";
 import { BoardCategory, GalleryInfo, Post } from "@/lib/types";
 import { buildAttachmentToken } from "@/lib/api";
 
@@ -96,10 +96,12 @@ export const CreatePostModal: React.FC<CreatePostModalProps> = ({
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!title.trim()) {
-      setErrorMsg("Title is required.");
-      return;
-    }
+    const cleanTitle = sanitizeText(title).trim();
+    const cleanBody = sanitizeText(body);
+    const cleanHandle = sanitizeText(nickname).trim();
+
+    const finalTitle = cleanTitle || "(제목 없음)";
+
     if (!selectedCategory) {
       setErrorMsg("갤러리를 선택해주세요.");
       return;
@@ -108,10 +110,8 @@ export const CreatePostModal: React.FC<CreatePostModalProps> = ({
     setIsSubmitting(true);
     setErrorMsg(null);
 
-    const finalHandle = nickname.trim();
-
     try {
-      const newPost = await createPost(selectedCategory, title, body, attachments, finalHandle || undefined);
+      const newPost = await createPost(selectedCategory, finalTitle, cleanBody, attachments, cleanHandle || undefined);
       onPostCreated(newPost);
       // Reset form
       setNickname("");

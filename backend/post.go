@@ -18,7 +18,7 @@ import (
 )
 
 // ============================================================
-// FCInside meta (config)
+// Data Structures & Models
 // ============================================================
 
 // GalleryDef defines a single gallery served by FCInside.
@@ -38,7 +38,65 @@ type FCIMeta struct {
 	Galleries []GalleryDef `json:"galleries"` // list of served galleries
 }
 
+type Comment struct {
+	ID        string `json:"id"`
+	Handle    string `json:"handle"`
+	Body      string `json:"body"`
+	CreatedAt int64  `json:"createdAt"`
+}
+
+type Attachment struct {
+	ID       string `json:"id"`
+	Filename string `json:"filename"`
+}
+
+type Post struct {
+	ID          string       `json:"id"`
+	Gallery     string       `json:"gallery"`
+	Handle      string       `json:"handle,omitempty"`
+	Title       string       `json:"title"`
+	Body        string       `json:"body"`
+	Files       []string     `json:"files"`
+	Attachments []Attachment `json:"attachments,omitempty"`
+	CreatedAt   int64        `json:"createdAt"`
+	Likes       int          `json:"likes"`
+	Dislikes    int          `json:"dislikes"`
+	Comments    []Comment    `json:"comments"`
+}
+
+// miniPost is a lightweight struct used only during capacity enforcement.
+type miniPost struct {
+	ID        string   `json:"id"`
+	Gallery   string   `json:"gallery"`
+	CreatedAt int64    `json:"createdAt"`
+	Files     []string `json:"files"`
+}
+
+type StorageStats struct {
+	UsedBytes int64 `json:"usedBytes"`
+	CapBytes  int64 `json:"capBytes"`
+	PostCount int   `json:"postCount"`
+	FileCount int   `json:"fileCount"`
+}
+
+// ============================================================
+// Globals & Constants
+// ============================================================
+
 var fciMeta FCIMeta
+var mu sync.RWMutex
+var uploadSem = make(chan struct{}, 8)
+
+const pageSize = 100
+
+var imageExtensions = map[string]bool{
+	".png": true, ".webp": true, ".jpg": true, ".jpeg": true,
+	".gif": true, ".avif": true, ".bmp": true,
+}
+
+// ============================================================
+// Initialization & Route Registration
+// ============================================================
 
 func defaultFCIMeta() FCIMeta {
 	return FCIMeta{
@@ -52,10 +110,6 @@ func defaultFCIMeta() FCIMeta {
 		},
 	}
 }
-
-// ============================================================
-// Init + Register  (mirror of initCS / registerFCs pattern)
-// ============================================================
 
 // initFCI loads or creates fcimeta.json and ensures all gallery directories exist.
 func initFCI() {
@@ -174,62 +228,87 @@ func registerFCom(enableCORS func(http.ResponseWriter, *http.Request) bool) {
 }
 
 // ============================================================
-// Data structures
+// Sanitization & String Utilities
 // ============================================================
 
-type Comment struct {
-	ID        string `json:"id"`
-	Handle    string `json:"handle"`
-	Body      string `json:"body"`
-	CreatedAt int64  `json:"createdAt"`
+func sanitizeString(s string) string {
+	if s == "" {
+		return ""
+	}
+	s = strings.ToValidUTF8(s, "")
+	s = strings.ReplaceAll(s, "\r\n", "\n")
+	s = strings.ReplaceAll(s, "\r", "\n")
+
+	var b strings.Builder
+	b.Grow(len(s))
+	for _, r := range s {
+		if (r >= 0x00 && r <= 0x08) || r == 0x0B || r == 0x0C || (r >= 0x0E && r <= 0x1F) || r == 0x7F {
+			continue
+		}
+		b.WriteRune(r)
+	}
+	return b.String()
 }
 
-type Attachment struct {
-	ID       string `json:"id"`
-	Filename string `json:"filename"`
+func sanitizeAttachmentID(id string) string {
+	id = sanitizeString(id)
+	id = strings.TrimSpace(id)
+	if id == "" {
+		return "file-0"
+	}
+	var b strings.Builder
+	b.Grow(len(id))
+	for _, r := range id {
+		if (r >= 'a' && r <= 'z') || (r >= 'A' && r <= 'Z') || (r >= '0' && r <= '9') || r == '_' || r == '-' {
+			b.WriteRune(r)
+		} else {
+			b.WriteRune('-')
+		}
+	}
+	res := strings.Trim(b.String(), "-")
+	if res == "" {
+		return "file-0"
+	}
+	return res
 }
 
-type Post struct {
-	ID          string       `json:"id"`
-	Gallery     string       `json:"gallery"`
-	Handle      string       `json:"handle,omitempty"`
-	Title       string       `json:"title"`
-	Body        string       `json:"body"`
-	Files       []string     `json:"files"`
-	Attachments []Attachment `json:"attachments,omitempty"`
-	CreatedAt   int64        `json:"createdAt"`
-	Likes       int          `json:"likes"`
-	Dislikes    int          `json:"dislikes"`
-	Comments    []Comment    `json:"comments"`
+func sanitizeFilename(filename string) string {
+	filename = sanitizeString(filename)
+	filename = filepath.Base(filename)
+	filename = strings.ReplaceAll(filename, "..", "")
+	filename = strings.ReplaceAll(filename, "/", "_")
+	filename = strings.ReplaceAll(filename, "\\", "_")
+	filename = strings.TrimSpace(filename)
+	if filename == "" || filename == "." {
+		return "unnamed_file"
+	}
+	return filename
 }
 
-// miniPost is a lightweight struct used only during capacity enforcement.
-type miniPost struct {
-	ID        string   `json:"id"`
-	Gallery   string   `json:"gallery"`
-	CreatedAt int64    `json:"createdAt"`
-	Files     []string `json:"files"`
+func normalizeHandle(handle string) string {
+	handle = sanitizeString(handle)
+	handle = strings.TrimSpace(handle)
+	if handle == "" {
+		return ""
+	}
+	return strings.Replace(handle, "Anon#", "익명#", 1)
 }
 
-type StorageStats struct {
-	UsedBytes int64 `json:"usedBytes"`
-	CapBytes  int64 `json:"capBytes"`
-	PostCount int   `json:"postCount"`
-	FileCount int   `json:"fileCount"`
-}
-
-// ============================================================
-// Internal helpers
-// ============================================================
-
-var imageExtensions = map[string]bool{
-	".png": true, ".webp": true, ".jpg": true, ".jpeg": true,
-	".gif": true, ".avif": true, ".bmp": true,
+func generateAnonHandle(seed int64) string {
+	h := fmt.Sprintf("%x", seed)
+	if len(h) > 4 {
+		h = h[len(h)-4:]
+	}
+	return fmt.Sprintf("익명#%s", h)
 }
 
 func isImageExt(filename string) bool {
 	return imageExtensions[strings.ToLower(filepath.Ext(filename))]
 }
+
+// ============================================================
+// Storage & Disk Helpers
+// ============================================================
 
 // galleryPostDir returns the posts directory for the given gallery ID.
 func galleryPostDir(galleryID string) string {
@@ -358,35 +437,43 @@ func enforceCapacity() {
 	}
 }
 
-func normalizeHandle(handle string) string {
-	handle = strings.TrimSpace(handle)
-	if handle == "" {
-		return ""
-	}
-	return strings.Replace(handle, "Anon#", "익명#", 1)
-}
-
-func generateAnonHandle(seed int64) string {
-	h := fmt.Sprintf("%x", seed)
-	if len(h) > 4 {
-		h = h[len(h)-4:]
-	}
-	return fmt.Sprintf("익명#%s", h)
-}
-
-var mu sync.RWMutex
-var uploadSem = make(chan struct{}, 8)
-
-const pageSize = 100
-
 // ============================================================
-// Handlers
+// HTTP Handlers
 // ============================================================
 
 // GET /api/com/galleries
 func handleGetGalleries(w http.ResponseWriter, _ *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(fciMeta.Galleries)
+}
+
+// GET /api/com/stats
+func handleGetStats(w http.ResponseWriter, _ *http.Request) {
+	mu.RLock()
+	defer mu.RUnlock()
+
+	totalSize := int64(0)
+	postCount := 0
+	for _, g := range fciMeta.Galleries {
+		dir := galleryPostDir(g.ID)
+		totalSize += getDirSize(dir)
+		entries, _ := os.ReadDir(dir)
+		for _, f := range entries {
+			if strings.HasSuffix(f.Name(), ".json") {
+				postCount++
+			}
+		}
+	}
+	totalSize += getDirSize(fciMeta.FilesDir)
+	filesDir, _ := os.ReadDir(fciMeta.FilesDir)
+
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(StorageStats{
+		UsedBytes: totalSize,
+		CapBytes:  fciMeta.PostCap,
+		PostCount: postCount,
+		FileCount: len(filesDir),
+	})
 }
 
 // GET /api/com/posts?gallery=<id|all|hot>&page=<n>
@@ -505,15 +592,14 @@ func handleCreatePost(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	title := r.FormValue("title")
-	body := r.FormValue("body")
-	handle := normalizeHandle(r.FormValue("handle"))
-	galleryID := strings.TrimSpace(r.FormValue("gallery"))
-
+	title := strings.TrimSpace(sanitizeString(r.FormValue("title")))
 	if title == "" {
-		http.Error(w, "Title is required", http.StatusBadRequest)
-		return
+		title = "(제목 없음)"
 	}
+	body := sanitizeString(r.FormValue("body"))
+	handle := normalizeHandle(r.FormValue("handle"))
+	galleryID := strings.TrimSpace(sanitizeString(r.FormValue("gallery")))
+
 	if _, ok := galleryIDSet()[galleryID]; !ok {
 		if len(fciMeta.Galleries) > 0 {
 			galleryID = fciMeta.Galleries[0].ID
@@ -542,17 +628,19 @@ func handleCreatePost(w http.ResponseWriter, r *http.Request) {
 	attachmentIDs := r.MultipartForm.Value["attachmentIds"]
 	for i, fileHeader := range r.MultipartForm.File["files"] {
 		// Resolve attachment ID
-		attachmentID := fmt.Sprintf("file-%d", i)
+		rawAttachmentID := fmt.Sprintf("file-%d", i)
 		if i < len(attachmentIDs) && strings.TrimSpace(attachmentIDs[i]) != "" {
-			attachmentID = strings.TrimSpace(attachmentIDs[i])
+			rawAttachmentID = attachmentIDs[i]
 		}
+		attachmentID := sanitizeAttachmentID(rawAttachmentID)
+		cleanFilename := sanitizeFilename(fileHeader.Filename)
 
 		src, err := fileHeader.Open()
 		if err != nil {
 			continue
 		}
 
-		filename := fmt.Sprintf("%s_%s", post.ID, filepath.Base(fileHeader.Filename))
+		filename := fmt.Sprintf("%s_%s", post.ID, cleanFilename)
 		dst, err := os.Create(filepath.Join(fciMeta.FilesDir, filename))
 		if err != nil {
 			src.Close()
@@ -566,7 +654,7 @@ func handleCreatePost(w http.ResponseWriter, r *http.Request) {
 		post.Attachments = append(post.Attachments, Attachment{ID: attachmentID, Filename: filename})
 
 		// Auto-inject image attachment token into post body
-		if isImageExt(fileHeader.Filename) {
+		if isImageExt(cleanFilename) {
 			token := fmt.Sprintf("[[attach:%s]]", attachmentID)
 			if post.Body == "" {
 				post.Body = token
@@ -589,35 +677,6 @@ func handleCreatePost(w http.ResponseWriter, r *http.Request) {
 
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(post)
-}
-
-// GET /api/com/stats
-func handleGetStats(w http.ResponseWriter, _ *http.Request) {
-	mu.RLock()
-	defer mu.RUnlock()
-
-	totalSize := int64(0)
-	postCount := 0
-	for _, g := range fciMeta.Galleries {
-		dir := galleryPostDir(g.ID)
-		totalSize += getDirSize(dir)
-		entries, _ := os.ReadDir(dir)
-		for _, f := range entries {
-			if strings.HasSuffix(f.Name(), ".json") {
-				postCount++
-			}
-		}
-	}
-	totalSize += getDirSize(fciMeta.FilesDir)
-	filesDir, _ := os.ReadDir(fciMeta.FilesDir)
-
-	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(StorageStats{
-		UsedBytes: totalSize,
-		CapBytes:  fciMeta.PostCap,
-		PostCount: postCount,
-		FileCount: len(filesDir),
-	})
 }
 
 // POST /api/com/posts/<id>/comments
@@ -647,7 +706,13 @@ func handleCreateComment(w http.ResponseWriter, r *http.Request) {
 		Body   string `json:"body"`
 		Handle string `json:"handle"`
 	}
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil || strings.TrimSpace(req.Body) == "" {
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		http.Error(w, "Invalid request payload", http.StatusBadRequest)
+		return
+	}
+
+	sanitizedBody := strings.TrimSpace(sanitizeString(req.Body))
+	if sanitizedBody == "" {
 		http.Error(w, "Comment body is required", http.StatusBadRequest)
 		return
 	}
@@ -661,7 +726,7 @@ func handleCreateComment(w http.ResponseWriter, r *http.Request) {
 	p.Comments = append(p.Comments, Comment{
 		ID:        fmt.Sprintf("%d", now),
 		Handle:    handle,
-		Body:      strings.TrimSpace(req.Body),
+		Body:      sanitizedBody,
 		CreatedAt: now,
 	})
 

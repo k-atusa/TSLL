@@ -1,5 +1,9 @@
 import { GalleryInfo, Post, StorageStats } from "./types";
 
+// ============================================================
+// Types & Constants
+// ============================================================
+
 export interface AttachmentUpload {
   id: string;
   file: File;
@@ -7,35 +11,17 @@ export interface AttachmentUpload {
 
 const API_BASE = "";
 
-// Helper: Format nanosecond timestamp to YYYY.MM.DD. HH:mm:ss (24h + seconds)
-export function formatFullDate(nanoTimestamp: number): string {
-  if (!nanoTimestamp) return "";
-  const date = new Date(Math.floor(nanoTimestamp / 1_000_000));
-  const YYYY = date.getFullYear();
-  const MM = String(date.getMonth() + 1).padStart(2, "0");
-  const DD = String(date.getDate()).padStart(2, "0");
-  const HH = String(date.getHours()).padStart(2, "0");
-  const mm = String(date.getMinutes()).padStart(2, "0");
-  const ss = String(date.getSeconds()).padStart(2, "0");
-  return `${YYYY}.${MM}.${DD}. ${HH}:${mm}:${ss}`;
+// ============================================================
+// String & Handle Utilities
+// ============================================================
+
+export function sanitizeText(str?: string | null): string {
+  if (!str) return "";
+  let cleaned = str.replace(/[\u0000-\u0008\u000B\u000C\u000E-\u001F\u007F]/g, "");
+  cleaned = cleaned.replace(/\r\n/g, "\n").replace(/\r/g, "\n");
+  return cleaned;
 }
 
-// Helper: Format nanosecond timestamp to relative Korean time string or full date
-export function formatTimeAgo(nanoTimestamp: number): string {
-  if (!nanoTimestamp) return "방금 전";
-  const ms = Math.floor(nanoTimestamp / 1_000_000);
-  const now = Date.now();
-  const diffSec = Math.floor((now - ms) / 1000);
-
-  if (diffSec < 60) return "방금 전";
-  if (diffSec < 3600) return `${Math.floor(diffSec / 60)}분 전`;
-  if (diffSec < 86400) return `${Math.floor(diffSec / 3600)}시간 전`;
-  if (diffSec < 604800) return `${Math.floor(diffSec / 86400)}일 전`;
-
-  return formatFullDate(nanoTimestamp);
-}
-
-// Helper: Generate anonymous tripcode handle (e.g. 익명#75fa) from post/comment ID
 export function generateAnonId(id: string): { handle: string; color: string } {
   let hash = 0;
   for (let i = 0; i < id.length; i++) {
@@ -74,22 +60,61 @@ export function generateRandomAnonId(): { handle: string; color: string } {
   return generateAnonId(seed);
 }
 
-// Helper: Get file URL for serving from Go backend
+// ============================================================
+// Date & Formatting Helpers
+// ============================================================
+
+export function formatFullDate(nanoTimestamp: number): string {
+  if (!nanoTimestamp) return "";
+  const date = new Date(Math.floor(nanoTimestamp / 1_000_000));
+  const YYYY = date.getFullYear();
+  const MM = String(date.getMonth() + 1).padStart(2, "0");
+  const DD = String(date.getDate()).padStart(2, "0");
+  const HH = String(date.getHours()).padStart(2, "0");
+  const mm = String(date.getMinutes()).padStart(2, "0");
+  const ss = String(date.getSeconds()).padStart(2, "0");
+  return `${YYYY}.${MM}.${DD}. ${HH}:${mm}:${ss}`;
+}
+
+export function formatTimeAgo(nanoTimestamp: number): string {
+  if (!nanoTimestamp) return "방금 전";
+  const ms = Math.floor(nanoTimestamp / 1_000_000);
+  const now = Date.now();
+  const diffSec = Math.floor((now - ms) / 1000);
+
+  if (diffSec < 60) return "방금 전";
+  if (diffSec < 3600) return `${Math.floor(diffSec / 60)}분 전`;
+  if (diffSec < 86400) return `${Math.floor(diffSec / 3600)}시간 전`;
+  if (diffSec < 604800) return `${Math.floor(diffSec / 86400)}일 전`;
+
+  return formatFullDate(nanoTimestamp);
+}
+
+export function formatBytes(bytes: number, decimals = 2): string {
+  if (!bytes || bytes <= 0) return "0 B";
+  const k = 1024;
+  const dm = decimals < 0 ? 0 : decimals;
+  const sizes = ["B", "KB", "MB", "GB", "TB"];
+  const i = Math.floor(Math.log(bytes) / Math.log(k));
+  return `${parseFloat((bytes / Math.pow(k, i)).toFixed(dm))} ${sizes[i]}`;
+}
+
+// ============================================================
+// File & Attachment Helpers
+// ============================================================
+
 export function getFileUrl(filename: string): string {
   return `${API_BASE}/api/com/files/${encodeURIComponent(filename)}`;
 }
 
-// Helper: Check if file is image
 export function isImageFile(filename: string): boolean {
   return /\.(jpeg|jpg|gif|png|webp|svg)$/i.test(filename);
 }
 
-// Helper: Check if file is video
 export function isVideoFile(filename: string): boolean {
   return /\.(mp4|webm|ogg|mov)$/i.test(filename);
 }
 
-// Helper: Extract original filename (removing timestamp prefix if present)
 export function getCleanFileName(filename: string): string {
   const parts = filename.split("_");
   if (parts.length > 1 && /^\d+$/.test(parts[0])) {
@@ -99,14 +124,24 @@ export function getCleanFileName(filename: string): string {
 }
 
 export function buildAttachmentToken(id: string): string {
-  return `[[attach:${id}]]`;
+  const cleanId = (id || "").replace(/[^a-zA-Z0-9_-]/g, "");
+  return `[[attach:${cleanId || "file-0"}]]`;
 }
 
 export function stripAttachmentTokens(text: string): string {
-  return text.replace(/\[\[attach:[a-zA-Z0-9-]+\]\]/g, "");
+  if (!text) return "";
+  return text.replace(/\\?\[\[attach:[a-zA-Z0-9_-]+\]\]/g, (match) => {
+    if (match.startsWith("\\")) {
+      return match.slice(1);
+    }
+    return "";
+  });
 }
 
-// API: Fetch list of galleries from backend
+// ============================================================
+// API Requests
+// ============================================================
+
 export async function fetchGalleries(): Promise<GalleryInfo[]> {
   try {
     const res = await fetch(`${API_BASE}/api/com/galleries`, {
@@ -121,7 +156,6 @@ export async function fetchGalleries(): Promise<GalleryInfo[]> {
   }
 }
 
-// API: Fetch posts for a gallery, with pagination (page starts at 1)
 export async function fetchPosts(
   gallery = "all",
   page = 1,
@@ -141,17 +175,6 @@ export async function fetchPosts(
   }
 }
 
-// Helper: Format byte counts cleanly (e.g. 104857600 -> 100 MB)
-export function formatBytes(bytes: number, decimals = 2): string {
-  if (!bytes || bytes <= 0) return "0 B";
-  const k = 1024;
-  const dm = decimals < 0 ? 0 : decimals;
-  const sizes = ["B", "KB", "MB", "GB", "TB"];
-  const i = Math.floor(Math.log(bytes) / Math.log(k));
-  return `${parseFloat((bytes / Math.pow(k, i)).toFixed(dm))} ${sizes[i]}`;
-}
-
-// API: Fetch backend storage statistics
 export async function fetchStorageStats(): Promise<StorageStats> {
   try {
     const res = await fetch(`${API_BASE}/api/com/stats`, {
@@ -170,7 +193,6 @@ export async function fetchStorageStats(): Promise<StorageStats> {
   }
 }
 
-// API: Fetch post detail
 export async function fetchPostDetail(id: string): Promise<Post | null> {
   try {
     const res = await fetch(`${API_BASE}/api/com/posts/${id}`, {
@@ -184,7 +206,6 @@ export async function fetchPostDetail(id: string): Promise<Post | null> {
   }
 }
 
-// API: Create new post
 export async function createPost(
   galleryId: string,
   title: string,
@@ -218,7 +239,6 @@ export async function createPost(
   return await res.json();
 }
 
-// API: Like / Upvote post
 export async function likePost(id: string): Promise<Post> {
   const res = await fetch(`${API_BASE}/api/com/posts/${id}/like`, {
     method: "POST",
@@ -227,7 +247,6 @@ export async function likePost(id: string): Promise<Post> {
   return await res.json();
 }
 
-// API: Dislike / Downvote post
 export async function dislikePost(id: string): Promise<Post> {
   const res = await fetch(`${API_BASE}/api/com/posts/${id}/dislike`, {
     method: "POST",
@@ -236,7 +255,6 @@ export async function dislikePost(id: string): Promise<Post> {
   return await res.json();
 }
 
-// API: Add comment to post
 export async function addComment(id: string, body: string, handle?: string): Promise<Post> {
   const res = await fetch(`${API_BASE}/api/com/posts/${id}/comments`, {
     method: "POST",
