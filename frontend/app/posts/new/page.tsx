@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useRef } from "react";
+import React, { useState, useRef, useEffect } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import {
@@ -23,14 +23,11 @@ import {
 } from "lucide-react";
 import { Header } from "@/components/Header";
 import { PostBodyContent } from "@/components/PostBodyContent";
-import { buildAttachmentToken, createPost, generateRandomAnonId } from "@/lib/api";
-import { BoardCategory } from "@/lib/types";
-import { GALLERIES } from "@/lib/constants";
+import { buildAttachmentToken, createPost, fetchGalleries, generateRandomAnonId } from "@/lib/api";
+import { BoardCategory, GalleryInfo } from "@/lib/types";
 
 export default function CreatePostPage() {
   const router = useRouter();
-
-  const CATEGORIES = GALLERIES.filter((g) => g.id !== "all" && g.id !== "hot");
 
   const previewAnon = React.useMemo(() => generateRandomAnonId(), []);
 
@@ -39,16 +36,25 @@ export default function CreatePostPage() {
     file: File;
   };
 
+  const [galleries, setGalleries] = useState<GalleryInfo[]>([]);
   const [nickname, setNickname] = useState("");
   const [title, setTitle] = useState("");
   const [body, setBody] = useState("");
-  const [selectedCategory, setSelectedCategory] = useState<BoardCategory>("general");
+  const [selectedCategory, setSelectedCategory] = useState<BoardCategory>("");
   const [attachments, setAttachments] = useState<DraftAttachment[]>([]);
   const [activeTab, setActiveTab] = useState<"edit" | "preview">("edit");
   const [submitting, setSubmitting] = useState(false);
   const [dragActive, setDragActive] = useState(false);
 
   const textareaRef = useRef<HTMLTextAreaElement>(null);
+
+  // Load galleries on mount
+  useEffect(() => {
+    fetchGalleries().then((list) => {
+      setGalleries(list);
+      if (list.length > 0) setSelectedCategory(list[0].id);
+    });
+  }, []);
 
   const insertAttachmentToken = (attachmentId: string) => {
     if (!textareaRef.current) return;
@@ -118,12 +124,10 @@ export default function CreatePostPage() {
 
     setSubmitting(true);
 
-    const prefix = `[${selectedCategory}]`;
-    const fullTitle = title.startsWith("[") ? title : `${prefix} ${title.trim()}`;
     const finalHandle = nickname.trim();
 
     try {
-      const created = await createPost(fullTitle, body, attachments, finalHandle || undefined);
+      const created = await createPost(selectedCategory, title, body, attachments, finalHandle || undefined);
       router.push(`/posts/${created.id}`);
     } catch (err) {
       console.error("Failed to create post", err);
@@ -180,19 +184,24 @@ export default function CreatePostPage() {
               갤러리 선택
             </label>
             <div className="flex flex-wrap gap-2">
-              {CATEGORIES.map((cat) => (
-                <button
-                  key={cat.id}
-                  type="button"
-                  onClick={() => setSelectedCategory(cat.id)}
-                  className={`px-3.5 py-2 rounded-md text-xs font-medium transition-all cursor-pointer ${selectedCategory === cat.id
-                      ? "bg-cyan-500/20 text-cyan-300 border border-cyan-500/50 shadow-sm font-bold"
-                      : "bg-slate-950 text-slate-400 border border-slate-800 hover:text-white"
+              {galleries.length === 0 ? (
+                <span className="text-xs text-slate-500 font-mono">갤러리 로딩 중...</span>
+              ) : (
+                galleries.map((cat) => (
+                  <button
+                    key={cat.id}
+                    type="button"
+                    onClick={() => setSelectedCategory(cat.id)}
+                    className={`px-3.5 py-2 rounded-md text-xs font-medium transition-all cursor-pointer ${
+                      selectedCategory === cat.id
+                        ? "bg-cyan-500/20 text-cyan-300 border border-cyan-500/50 shadow-sm font-bold"
+                        : "bg-slate-950 text-slate-400 border border-slate-800 hover:text-white"
                     }`}
-                >
-                  {cat.icon} {cat.name}
-                </button>
-              ))}
+                  >
+                    {cat.icon} {cat.name}
+                  </button>
+                ))
+              )}
             </div>
           </div>
 

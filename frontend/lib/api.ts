@@ -1,4 +1,4 @@
-import { Post, StorageStats } from "./types";
+import { GalleryInfo, Post, StorageStats } from "./types";
 
 export interface AttachmentUpload {
   id: string;
@@ -106,18 +106,38 @@ export function stripAttachmentTokens(text: string): string {
   return text.replace(/\[\[attach:[a-zA-Z0-9-]+\]\]/g, "");
 }
 
-// API: Fetch all posts
-export async function fetchPosts(): Promise<Post[]> {
+// API: Fetch list of galleries from backend
+export async function fetchGalleries(): Promise<GalleryInfo[]> {
   try {
-    const res = await fetch(`${API_BASE}/api/com/posts`, {
+    const res = await fetch(`${API_BASE}/api/com/galleries`, {
       cache: "no-store",
     });
     if (!res.ok) throw new Error(`HTTP error ${res.status}`);
     const data = await res.json();
     return data || [];
   } catch (err) {
-    console.warn("API fetch error, returning empty list", err);
+    console.warn("API fetchGalleries error, returning empty list", err);
     return [];
+  }
+}
+
+// API: Fetch posts for a gallery, with pagination (page starts at 1)
+export async function fetchPosts(
+  gallery = "all",
+  page = 1,
+): Promise<{ posts: Post[]; total: number; page: number }> {
+  try {
+    const params = new URLSearchParams({ gallery, page: String(page) });
+    const res = await fetch(`${API_BASE}/api/com/posts?${params}`, {
+      cache: "no-store",
+    });
+    if (!res.ok) throw new Error(`HTTP error ${res.status}`);
+    const posts: Post[] = (await res.json()) || [];
+    const total = parseInt(res.headers.get("X-Total-Count") ?? "0", 10);
+    return { posts, total, page };
+  } catch (err) {
+    console.warn("API fetch error, returning empty list", err);
+    return { posts: [], total: 0, page };
   }
 }
 
@@ -166,12 +186,14 @@ export async function fetchPostDetail(id: string): Promise<Post | null> {
 
 // API: Create new post
 export async function createPost(
+  galleryId: string,
   title: string,
   body: string,
   attachments: AttachmentUpload[],
   handle?: string,
 ): Promise<Post> {
   const formData = new FormData();
+  formData.append("gallery", galleryId);
   formData.append("title", title);
   formData.append("body", body);
   if (handle) {

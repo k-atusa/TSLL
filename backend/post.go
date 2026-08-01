@@ -1,4 +1,4 @@
-// test825b : project USAG FalseCrypt server
+// test825b : project USAG FalseCrypt server - community (FCInside) logic
 package main
 
 import (
@@ -11,18 +11,159 @@ import (
 	"path/filepath"
 	"runtime/debug"
 	"sort"
+	"strconv"
 	"strings"
 	"sync"
 	"time"
 )
 
-type miniPost struct {
-	ID        string   `json:"id"`
-	CreatedAt int64    `json:"createdAt"`
-	Files     []string `json:"files"`
+// ============================================================
+// FCInside meta (config)
+// ============================================================
+
+// GalleryDef defines a single gallery served by FCInside.
+type GalleryDef struct {
+	ID        string `json:"id"`        // URL-safe identifier, e.g. "announcement"
+	Name      string `json:"name"`      // Display name, e.g. "공지사항 갤러리"
+	ShortName string `json:"shortName"` // Abbreviation shown in sidebar, e.g. "공지"
+	Icon      string `json:"icon"`      // Emoji icon
 }
 
-// === post data structure ===
+// FCIMeta is the on-disk configuration structure for fcimeta.json.
+type FCIMeta struct {
+	PostDir   string       `json:"postDir"`   // root dir; each gallery stored under PostDir/<id>/
+	FilesDir  string       `json:"filesDir"`  // uploaded files directory
+	PostCap   int64        `json:"postCap"`   // total byte cap for PostDir + FilesDir
+	HotMin    int          `json:"hotMin"`    // minimum likes to appear in 실베 (default: 10)
+	Galleries []GalleryDef `json:"galleries"` // list of served galleries
+}
+
+var fciMeta FCIMeta
+
+func defaultFCIMeta() FCIMeta {
+	return FCIMeta{
+		PostDir:  "./fcidata/posts",
+		FilesDir: "./fcidata/files",
+		PostCap:  104857600, // 100 MB
+		HotMin:   15,
+		Galleries: []GalleryDef{
+			{ID: "announcement", Name: "공지사항 갤러리", ShortName: "공지", Icon: "📢"},
+			{ID: "development", Name: "개발 갤러리", ShortName: "개발", Icon: "💻"},
+		},
+	}
+}
+
+// ============================================================
+// Init + Register  (mirror of initCS / registerFCs pattern)
+// ============================================================
+
+// initFCI loads or creates fcimeta.json and ensures all gallery directories exist.
+func initFCI() {
+	metaPath := config.FCIMeta
+	data, err := os.ReadFile(metaPath)
+	if os.IsNotExist(err) {
+		fciMeta = defaultFCIMeta()
+		out, _ := json.MarshalIndent(fciMeta, "", "  ")
+		if writeErr := os.WriteFile(metaPath, out, 0644); writeErr != nil {
+			log.Fatalf("FCInside: failed to write fcimeta.json: %v", writeErr)
+		}
+		log.Println("Created fcimeta:", metaPath)
+	} else if err != nil {
+		log.Fatalf("FCInside: failed to read fcimeta.json: %v", err)
+	} else {
+		if decErr := json.Unmarshal(data, &fciMeta); decErr != nil {
+			log.Fatalf("FCInside: failed to decode fcimeta.json: %v", decErr)
+		}
+		if fciMeta.HotMin == 0 {
+			fciMeta.HotMin = 10 // back-compat: default if missing from existing fcimeta.json
+		}
+	}
+
+	// Ensure files directory exists
+	if err := os.MkdirAll(fciMeta.FilesDir, 0755); err != nil {
+		log.Fatalf("FCInside: failed to create files dir: %v", err)
+	}
+	// Ensure per-gallery post subdirectories exist
+	for _, g := range fciMeta.Galleries {
+		dir := filepath.Join(fciMeta.PostDir, g.ID)
+		if err := os.MkdirAll(dir, 0755); err != nil {
+			log.Fatalf("FCInside: failed to create gallery dir '%s': %v", g.ID, err)
+		}
+	}
+}
+
+// registerFCom registers all /api/com/* HTTP handlers.
+// enableCORS is the shared CORS middleware provided by main.
+func registerFCom(enableCORS func(http.ResponseWriter, *http.Request) bool) {
+	// static file server for uploaded files
+	filesFs := http.FileServer(http.Dir(fciMeta.FilesDir))
+	http.HandleFunc("/api/com/files/", func(w http.ResponseWriter, r *http.Request) {
+		if enableCORS(w, r) {
+			return
+		}
+		w.Header().Set("Content-Security-Policy", "default-src 'none'; img-src 'self'; media-src 'self'; style-src 'unsafe-inline'")
+		w.Header().Set("X-Content-Type-Options", "nosniff")
+		http.StripPrefix("/api/com/files/", filesFs).ServeHTTP(w, r)
+	})
+
+	http.HandleFunc("/api/com/galleries", func(w http.ResponseWriter, r *http.Request) {
+		if enableCORS(w, r) {
+			return
+		}
+		if r.Method == http.MethodGet {
+			handleGetGalleries(w, r)
+		} else {
+			http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+		}
+	})
+
+	http.HandleFunc("/api/com/posts", func(w http.ResponseWriter, r *http.Request) {
+		if enableCORS(w, r) {
+			return
+		}
+		if r.Method == http.MethodGet {
+			handleGetPosts(w, r)
+		} else if r.Method == http.MethodPost {
+			handleCreatePost(w, r)
+		} else {
+			http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+		}
+	})
+
+	http.HandleFunc("/api/com/posts/", func(w http.ResponseWriter, r *http.Request) {
+		if enableCORS(w, r) {
+			return
+		}
+		switch {
+		case strings.HasSuffix(r.URL.Path, "/like") && r.Method == http.MethodPost:
+			handleLikePost(w, r)
+		case strings.HasSuffix(r.URL.Path, "/dislike") && r.Method == http.MethodPost:
+			handleDislikePost(w, r)
+		case strings.HasSuffix(r.URL.Path, "/comments") && r.Method == http.MethodPost:
+			handleCreateComment(w, r)
+		case r.Method == http.MethodGet:
+			handleGetPostDetail(w, r)
+		default:
+			http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+		}
+	})
+
+	http.HandleFunc("/api/com/stats", func(w http.ResponseWriter, r *http.Request) {
+		if enableCORS(w, r) {
+			return
+		}
+		if r.Method == http.MethodGet {
+			handleGetStats(w, r)
+		} else {
+			http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+		}
+	})
+}
+
+// ============================================================
+// Data structures
+// ============================================================
+
 type Comment struct {
 	ID        string `json:"id"`
 	Handle    string `json:"handle"`
@@ -37,6 +178,7 @@ type Attachment struct {
 
 type Post struct {
 	ID          string       `json:"id"`
+	Gallery     string       `json:"gallery"`
 	Handle      string       `json:"handle,omitempty"`
 	Title       string       `json:"title"`
 	Body        string       `json:"body"`
@@ -48,6 +190,14 @@ type Post struct {
 	Comments    []Comment    `json:"comments"`
 }
 
+// miniPost is a lightweight struct used only during capacity enforcement.
+type miniPost struct {
+	ID        string   `json:"id"`
+	Gallery   string   `json:"gallery"`
+	CreatedAt int64    `json:"createdAt"`
+	Files     []string `json:"files"`
+}
+
 type StorageStats struct {
 	UsedBytes int64 `json:"usedBytes"`
 	CapBytes  int64 `json:"capBytes"`
@@ -55,81 +205,146 @@ type StorageStats struct {
 	FileCount int   `json:"fileCount"`
 }
 
-// === ensure directory capacity ===
-func getDirSize(path string) (int64, error) {
-	var size int64
-	err := filepath.Walk(path, func(_ string, info os.FileInfo, err error) error {
-		if err != nil {
-			return err
+// ============================================================
+// Internal helpers
+// ============================================================
+
+var imageExtensions = map[string]bool{
+	".png": true, ".webp": true, ".jpg": true, ".jpeg": true,
+	".gif": true, ".avif": true, ".bmp": true,
+}
+
+func isImageExt(filename string) bool {
+	return imageExtensions[strings.ToLower(filepath.Ext(filename))]
+}
+
+// galleryPostDir returns the posts directory for the given gallery ID.
+func galleryPostDir(galleryID string) string {
+	return filepath.Join(fciMeta.PostDir, galleryID)
+}
+
+// galleryIDSet returns a set of valid gallery IDs for fast lookup.
+func galleryIDSet() map[string]struct{} {
+	m := make(map[string]struct{}, len(fciMeta.Galleries))
+	for _, g := range fciMeta.Galleries {
+		m[g.ID] = struct{}{}
+	}
+	return m
+}
+
+// findPostPath scans all gallery directories for a post with the given ID.
+// Returns the full path and gallery ID, or empty strings if not found.
+func findPostPath(id string) (path string, gallery string) {
+	for _, g := range fciMeta.Galleries {
+		p := filepath.Join(galleryPostDir(g.ID), id+".json")
+		if _, err := os.Stat(p); err == nil {
+			return p, g.ID
 		}
-		if !info.IsDir() {
+	}
+	return "", ""
+}
+
+// loadPost reads and unmarshals a post JSON file.
+func loadPost(path string) (Post, error) {
+	data, err := os.ReadFile(path)
+	if err != nil {
+		return Post{}, err
+	}
+	var p Post
+	if err := json.Unmarshal(data, &p); err != nil {
+		return Post{}, err
+	}
+	return p, nil
+}
+
+// savePost marshals and writes a post to its file.
+func savePost(path string, p Post) error {
+	data, err := json.Marshal(p)
+	if err != nil {
+		return err
+	}
+	return os.WriteFile(path, data, 0644)
+}
+
+func getDirSize(path string) int64 {
+	var size int64
+	filepath.Walk(path, func(_ string, info os.FileInfo, err error) error {
+		if err == nil && !info.IsDir() {
 			size += info.Size()
 		}
 		return nil
 	})
-	return size, err
+	return size
 }
 
+// enforceCapacity deletes the oldest post(s) until total disk usage is within cap.
+// Must be called with mu.Lock() held.
 func enforceCapacity() {
-	size, err := getDirSize(config.PostDir)
-	if err != nil {
-		log.Printf("Error calculating dir size: %v", err)
+	// Compute initial total size
+	totalSize := int64(0)
+	for _, g := range fciMeta.Galleries {
+		totalSize += getDirSize(galleryPostDir(g.ID))
+	}
+	totalSize += getDirSize(fciMeta.FilesDir)
+
+	if totalSize <= fciMeta.PostCap {
 		return
 	}
 
-	cleaned := false
-	for size > config.PostCap {
-		log.Printf("Current size (%d) exceeds capacity (%d). Cleaning up...", size, config.PostCap)
-		postsDir := filepath.Join(config.PostDir, "posts")
-		files, err := os.ReadDir(postsDir)
-		if err != nil || len(files) == 0 {
-			break // Nothing to delete or error
+	// Collect all posts (lightweight) sorted oldest-first
+	var all []miniPost
+	for _, g := range fciMeta.Galleries {
+		dir := galleryPostDir(g.ID)
+		entries, err := os.ReadDir(dir)
+		if err != nil {
+			continue
 		}
-
-		// load lightweight posts
-		var posts []miniPost
-		for _, f := range files {
+		for _, f := range entries {
 			if !strings.HasSuffix(f.Name(), ".json") {
 				continue
 			}
-			postPath := filepath.Join(postsDir, f.Name())
-			data, err := os.ReadFile(postPath)
+			data, err := os.ReadFile(filepath.Join(dir, f.Name()))
 			if err != nil {
 				continue
 			}
-			var p miniPost
-			if err := json.Unmarshal(data, &p); err == nil {
-				posts = append(posts, p)
+			var mp miniPost
+			if json.Unmarshal(data, &mp) == nil {
+				mp.Gallery = g.ID
+				all = append(all, mp)
 			}
 		}
-		if len(posts) == 0 {
-			break
-		}
-
-		// sort ascending by CreatedAt (oldest first)
-		sort.Slice(posts, func(i, j int) bool {
-			return posts[i].CreatedAt < posts[j].CreatedAt
-		})
-		oldest := posts[0]
-		log.Printf("Deleting oldest post ID: %s", oldest.ID)
-
-		// delete post json, recalculate
-		os.Remove(filepath.Join(postsDir, oldest.ID+".json"))
-		for _, fname := range oldest.Files {
-			os.Remove(filepath.Join(config.PostDir, "files", fname))
-		}
-		cleaned = true
-		size, err = getDirSize(config.PostDir)
-		if err != nil {
-			break
-		}
 	}
-	if cleaned {
+	sort.Slice(all, func(i, j int) bool { return all[i].CreatedAt < all[j].CreatedAt })
+
+	freed := false
+	for totalSize > fciMeta.PostCap && len(all) > 0 {
+		oldest := all[0]
+		all = all[1:]
+		log.Printf("enforceCapacity: deleting post %s (gallery: %s)", oldest.ID, oldest.Gallery)
+
+		postPath := filepath.Join(galleryPostDir(oldest.Gallery), oldest.ID+".json")
+
+		// Subtract file sizes before deleting
+		if info, err := os.Stat(postPath); err == nil {
+			totalSize -= info.Size()
+		}
+		os.Remove(postPath)
+
+		for _, fname := range oldest.Files {
+			fp := filepath.Join(fciMeta.FilesDir, fname)
+			if info, err := os.Stat(fp); err == nil {
+				totalSize -= info.Size()
+			}
+			os.Remove(fp)
+		}
+		freed = true
+	}
+
+	if freed {
 		debug.FreeOSMemory()
 	}
 }
 
-// === control user handles ===
 func normalizeHandle(handle string) string {
 	handle = strings.TrimSpace(handle)
 	if handle == "" {
@@ -139,54 +354,114 @@ func normalizeHandle(handle string) string {
 }
 
 func generateAnonHandle(seed int64) string {
-	randHex := fmt.Sprintf("%x", seed)
-	if len(randHex) > 4 {
-		randHex = randHex[len(randHex)-4:]
+	h := fmt.Sprintf("%x", seed)
+	if len(h) > 4 {
+		h = h[len(h)-4:]
 	}
-	return fmt.Sprintf("익명#%s", randHex)
+	return fmt.Sprintf("익명#%s", h)
 }
 
-var mu sync.RWMutex                    // For synchronizing post creations and deletions
-var uploadSem = make(chan struct{}, 8) // Limit concurrent uploads to prevent disk overflow
+var mu sync.RWMutex
+var uploadSem = make(chan struct{}, 8)
 
-// get posts
+const pageSize = 100
+
+// ============================================================
+// Handlers
+// ============================================================
+
+// GET /api/com/galleries
+func handleGetGalleries(w http.ResponseWriter, _ *http.Request) {
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(fciMeta.Galleries)
+}
+
+// GET /api/com/posts?gallery=<id|all|hot>&page=<n>
 func handleGetPosts(w http.ResponseWriter, r *http.Request) {
 	mu.RLock()
 	defer mu.RUnlock()
 
-	// read posts
-	postsDir := filepath.Join(config.PostDir, "posts")
-	files, err := os.ReadDir(postsDir)
-	if err != nil {
-		http.Error(w, "Failed to read posts", http.StatusInternalServerError)
-		return
+	galleryParam := strings.TrimSpace(r.URL.Query().Get("gallery"))
+	if galleryParam == "" {
+		galleryParam = "all"
+	}
+	page, _ := strconv.Atoi(r.URL.Query().Get("page"))
+	if page < 1 {
+		page = 1
 	}
 
-	// load posts
-	var posts []Post
-	for _, f := range files {
-		if !strings.HasSuffix(f.Name(), ".json") {
-			continue
+	// Determine which gallery directories to scan
+	var dirs []string
+	switch galleryParam {
+	case "all", "hot":
+		for _, g := range fciMeta.Galleries {
+			dirs = append(dirs, g.ID)
 		}
-		data, err := os.ReadFile(filepath.Join(postsDir, f.Name()))
+	default:
+		if _, ok := galleryIDSet()[galleryParam]; !ok {
+			http.Error(w, "Unknown gallery", http.StatusBadRequest)
+			return
+		}
+		dirs = []string{galleryParam}
+	}
+
+	// Load posts from disk
+	var posts []Post
+	for _, gid := range dirs {
+		entries, err := os.ReadDir(galleryPostDir(gid))
 		if err != nil {
 			continue
 		}
-		var p Post
-		if err := json.Unmarshal(data, &p); err == nil {
+		for _, f := range entries {
+			if !strings.HasSuffix(f.Name(), ".json") {
+				continue
+			}
+			p, err := loadPost(filepath.Join(galleryPostDir(gid), f.Name()))
+			if err != nil {
+				continue
+			}
 			posts = append(posts, p)
 		}
 	}
 
-	// sort descending by CreatedAt (newest first)
+	// Filter for 실시간 베스트
+	if galleryParam == "hot" {
+		hotMin := fciMeta.HotMin
+		hot := posts[:0]
+		for _, p := range posts {
+			if p.Likes >= hotMin {
+				hot = append(hot, p)
+			}
+		}
+		posts = hot
+	}
+
+	// Sort newest-first
 	sort.Slice(posts, func(i, j int) bool {
 		return posts[i].CreatedAt > posts[j].CreatedAt
 	})
+
+	// Paginate
+	total := len(posts)
+	start := (page - 1) * pageSize
+	if start >= total {
+		posts = []Post{}
+	} else {
+		end := start + pageSize
+		if end > total {
+			end = total
+		}
+		posts = posts[start:end]
+	}
+
 	w.Header().Set("Content-Type", "application/json")
+	w.Header().Set("X-Total-Count", strconv.Itoa(total))
+	w.Header().Set("X-Page", strconv.Itoa(page))
+	w.Header().Set("X-Page-Size", strconv.Itoa(pageSize))
 	json.NewEncoder(w).Encode(posts)
 }
 
-// get post detail
+// GET /api/com/posts/<id>
 func handleGetPostDetail(w http.ResponseWriter, r *http.Request) {
 	id := strings.TrimPrefix(r.URL.Path, "/api/com/posts/")
 	if id == "" || filepath.Base(id) != id {
@@ -194,141 +469,163 @@ func handleGetPostDetail(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// read post json
-	postPath := filepath.Join(config.PostDir, "posts", id+".json")
+	postPath, _ := findPostPath(id)
+	if postPath == "" {
+		http.Error(w, "Post not found", http.StatusNotFound)
+		return
+	}
+
 	data, err := os.ReadFile(postPath)
 	if err != nil {
 		http.Error(w, "Post not found", http.StatusNotFound)
 		return
 	}
-
 	w.Header().Set("Content-Type", "application/json")
 	w.Write(data)
 }
 
-// create post
+// POST /api/com/posts
 func handleCreatePost(w http.ResponseWriter, r *http.Request) {
-	r.Body = http.MaxBytesReader(w, r.Body, config.MaxSize) // prevent too large file
+	r.Body = http.MaxBytesReader(w, r.Body, config.MaxSize)
 	if err := r.ParseMultipartForm(2 * 1048576); err != nil {
 		http.Error(w, "File too large or parse error", http.StatusBadRequest)
 		return
 	}
 
-	// validate title
 	title := r.FormValue("title")
 	body := r.FormValue("body")
 	handle := normalizeHandle(r.FormValue("handle"))
+	galleryID := strings.TrimSpace(r.FormValue("gallery"))
+
 	if title == "" {
 		http.Error(w, "Title is required", http.StatusBadRequest)
 		return
 	}
+	if _, ok := galleryIDSet()[galleryID]; !ok {
+		if len(fciMeta.Galleries) > 0 {
+			galleryID = fciMeta.Galleries[0].ID
+		} else {
+			http.Error(w, "No galleries configured", http.StatusInternalServerError)
+			return
+		}
+	}
 
-	// limit concurrent disk writes
+	// Rate-limit concurrent uploads
 	uploadSem <- struct{}{}
 	defer func() { <-uploadSem }()
 
-	// generate id, create post
-	id := fmt.Sprintf("%d", time.Now().UnixNano())
+	// Capture time once — used for both ID and CreatedAt
+	now := time.Now().UnixNano()
 	post := Post{
-		ID:        id,
+		ID:        fmt.Sprintf("%d", now),
+		Gallery:   galleryID,
 		Handle:    handle,
 		Title:     title,
 		Body:      body,
-		CreatedAt: time.Now().UnixNano(),
+		CreatedAt: now,
 	}
 
-	// handle files
-	files := r.MultipartForm.File["files"]
+	// Process uploaded files — explicit Close instead of defer-in-loop
 	attachmentIDs := r.MultipartForm.Value["attachmentIds"]
-	for _, fileHeader := range files {
-		attachmentID := fmt.Sprintf("file-%d", len(post.Attachments))
-		if len(attachmentIDs) > len(post.Attachments) && strings.TrimSpace(attachmentIDs[len(post.Attachments)]) != "" {
-			attachmentID = strings.TrimSpace(attachmentIDs[len(post.Attachments)])
+	for i, fileHeader := range r.MultipartForm.File["files"] {
+		// Resolve attachment ID
+		attachmentID := fmt.Sprintf("file-%d", i)
+		if i < len(attachmentIDs) && strings.TrimSpace(attachmentIDs[i]) != "" {
+			attachmentID = strings.TrimSpace(attachmentIDs[i])
 		}
 
-		file, err := fileHeader.Open()
+		src, err := fileHeader.Open()
 		if err != nil {
 			continue
 		}
-		defer file.Close()
 
-		// get filename, save
-		filename := fmt.Sprintf("%s_%s", id, filepath.Base(fileHeader.Filename))
+		filename := fmt.Sprintf("%s_%s", post.ID, filepath.Base(fileHeader.Filename))
+		dst, err := os.Create(filepath.Join(fciMeta.FilesDir, filename))
+		if err != nil {
+			src.Close()
+			continue
+		}
+		io.Copy(dst, src)
+		dst.Close()
+		src.Close()
+
 		post.Files = append(post.Files, filename)
 		post.Attachments = append(post.Attachments, Attachment{ID: attachmentID, Filename: filename})
-		dst, err := os.Create(filepath.Join(config.PostDir, "files", filename))
-		if err != nil {
-			continue
+
+		// Auto-inject image attachment token into post body
+		if isImageExt(fileHeader.Filename) {
+			token := fmt.Sprintf("[[attach:%s]]", attachmentID)
+			if post.Body == "" {
+				post.Body = token
+			} else {
+				post.Body = post.Body + "\n" + token
+			}
 		}
-		defer dst.Close()
-		io.Copy(dst, file)
 	}
 
-	// write post json
-	postData, _ := json.Marshal(post)
-	postPath := filepath.Join(config.PostDir, "posts", id+".json")
-	os.WriteFile(postPath, postData, 0644)
-
-	// enforce capacity
+	// Persist and enforce capacity under write lock
 	mu.Lock()
+	err := savePost(filepath.Join(galleryPostDir(galleryID), post.ID+".json"), post)
+	if err != nil {
+		mu.Unlock()
+		http.Error(w, "Failed to save post", http.StatusInternalServerError)
+		return
+	}
 	enforceCapacity()
 	mu.Unlock()
+
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(post)
 }
 
-// get storage stats
-func handleGetStats(w http.ResponseWriter, r *http.Request) {
+// GET /api/com/stats
+func handleGetStats(w http.ResponseWriter, _ *http.Request) {
 	mu.RLock()
 	defer mu.RUnlock()
 
-	usedSize, _ := getDirSize(config.PostDir)
-
-	postsDir := filepath.Join(config.PostDir, "posts")
-	postFiles, _ := os.ReadDir(postsDir)
+	totalSize := int64(0)
 	postCount := 0
-	for _, f := range postFiles {
-		if strings.HasSuffix(f.Name(), ".json") {
-			postCount++
+	for _, g := range fciMeta.Galleries {
+		dir := galleryPostDir(g.ID)
+		totalSize += getDirSize(dir)
+		entries, _ := os.ReadDir(dir)
+		for _, f := range entries {
+			if strings.HasSuffix(f.Name(), ".json") {
+				postCount++
+			}
 		}
 	}
-
-	filesDir := filepath.Join(config.PostDir, "files")
-	attachedFiles, _ := os.ReadDir(filesDir)
-	fileCount := len(attachedFiles)
-
-	stats := StorageStats{
-		UsedBytes: usedSize,
-		CapBytes:  config.PostCap,
-		PostCount: postCount,
-		FileCount: fileCount,
-	}
+	totalSize += getDirSize(fciMeta.FilesDir)
+	filesDir, _ := os.ReadDir(fciMeta.FilesDir)
 
 	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(stats)
+	json.NewEncoder(w).Encode(StorageStats{
+		UsedBytes: totalSize,
+		CapBytes:  fciMeta.PostCap,
+		PostCount: postCount,
+		FileCount: len(filesDir),
+	})
 }
 
-// handle add comment to post
+// POST /api/com/posts/<id>/comments
 func handleCreateComment(w http.ResponseWriter, r *http.Request) {
 	mu.Lock()
 	defer mu.Unlock()
 
-	id := strings.TrimPrefix(r.URL.Path, "/api/com/posts/")
-	id = strings.TrimSuffix(id, "/comments")
+	id := strings.TrimSuffix(strings.TrimPrefix(r.URL.Path, "/api/com/posts/"), "/comments")
 	if id == "" || filepath.Base(id) != id {
 		http.Error(w, "Invalid post ID", http.StatusBadRequest)
 		return
 	}
 
-	postPath := filepath.Join(config.PostDir, "posts", id+".json")
-	data, err := os.ReadFile(postPath)
-	if err != nil {
+	postPath, _ := findPostPath(id)
+	if postPath == "" {
 		http.Error(w, "Post not found", http.StatusNotFound)
 		return
 	}
 
-	var p Post
-	if err := json.Unmarshal(data, &p); err != nil {
+	p, err := loadPost(postPath)
+	if err != nil {
 		http.Error(w, "Corrupt post data", http.StatusInternalServerError)
 		return
 	}
@@ -342,88 +639,66 @@ func handleCreateComment(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	commentID := fmt.Sprintf("%d", time.Now().UnixNano())
 	handle := normalizeHandle(req.Handle)
 	if handle == "" {
 		handle = generateAnonHandle(time.Now().UnixNano())
 	}
-	comment := Comment{
-		ID:        commentID,
+
+	now := time.Now().UnixNano()
+	p.Comments = append(p.Comments, Comment{
+		ID:        fmt.Sprintf("%d", now),
 		Handle:    handle,
 		Body:      strings.TrimSpace(req.Body),
-		CreatedAt: time.Now().UnixNano(),
+		CreatedAt: now,
+	})
+
+	if err := savePost(postPath, p); err != nil {
+		http.Error(w, "Failed to save comment", http.StatusInternalServerError)
+		return
 	}
-
-	p.Comments = append(p.Comments, comment)
-	updatedData, _ := json.Marshal(p)
-	os.WriteFile(postPath, updatedData, 0644)
-
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(p)
 }
 
-// handle post like/upvote
+// modifyPostVote is a shared helper for like/dislike handlers.
+func modifyPostVote(w http.ResponseWriter, r *http.Request, suffix string, apply func(*Post)) {
+	mu.Lock()
+	defer mu.Unlock()
+
+	id := strings.TrimSuffix(strings.TrimPrefix(r.URL.Path, "/api/com/posts/"), suffix)
+	if id == "" || filepath.Base(id) != id {
+		http.Error(w, "Invalid post ID", http.StatusBadRequest)
+		return
+	}
+
+	postPath, _ := findPostPath(id)
+	if postPath == "" {
+		http.Error(w, "Post not found", http.StatusNotFound)
+		return
+	}
+
+	p, err := loadPost(postPath)
+	if err != nil {
+		http.Error(w, "Corrupt post data", http.StatusInternalServerError)
+		return
+	}
+
+	apply(&p)
+
+	if err := savePost(postPath, p); err != nil {
+		http.Error(w, "Failed to save post", http.StatusInternalServerError)
+		return
+	}
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(p)
+}
+
+// POST /api/com/posts/<id>/like
 func handleLikePost(w http.ResponseWriter, r *http.Request) {
-	mu.Lock()
-	defer mu.Unlock()
-
-	id := strings.TrimPrefix(r.URL.Path, "/api/com/posts/")
-	id = strings.TrimSuffix(id, "/like")
-	if id == "" || filepath.Base(id) != id {
-		http.Error(w, "Invalid post ID", http.StatusBadRequest)
-		return
-	}
-
-	postPath := filepath.Join(config.PostDir, "posts", id+".json")
-	data, err := os.ReadFile(postPath)
-	if err != nil {
-		http.Error(w, "Post not found", http.StatusNotFound)
-		return
-	}
-
-	var p Post
-	if err := json.Unmarshal(data, &p); err != nil {
-		http.Error(w, "Corrupt post data", http.StatusInternalServerError)
-		return
-	}
-
-	p.Likes++
-	updatedData, _ := json.Marshal(p)
-	os.WriteFile(postPath, updatedData, 0644)
-
-	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(p)
+	modifyPostVote(w, r, "/like", func(p *Post) { p.Likes++ })
 }
 
-// handle post dislike
+// POST /api/com/posts/<id>/dislike
 func handleDislikePost(w http.ResponseWriter, r *http.Request) {
-	mu.Lock()
-	defer mu.Unlock()
-
-	id := strings.TrimPrefix(r.URL.Path, "/api/com/posts/")
-	id = strings.TrimSuffix(id, "/dislike")
-	if id == "" || filepath.Base(id) != id {
-		http.Error(w, "Invalid post ID", http.StatusBadRequest)
-		return
-	}
-
-	postPath := filepath.Join(config.PostDir, "posts", id+".json")
-	data, err := os.ReadFile(postPath)
-	if err != nil {
-		http.Error(w, "Post not found", http.StatusNotFound)
-		return
-	}
-
-	var p Post
-	if err := json.Unmarshal(data, &p); err != nil {
-		http.Error(w, "Corrupt post data", http.StatusInternalServerError)
-		return
-	}
-
-	p.Dislikes++
-	updatedData, _ := json.Marshal(p)
-	os.WriteFile(postPath, updatedData, 0644)
-
-	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(p)
+	modifyPostVote(w, r, "/dislike", func(p *Post) { p.Dislikes++ })
 }

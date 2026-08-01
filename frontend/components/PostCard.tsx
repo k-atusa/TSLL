@@ -24,7 +24,6 @@ import {
   normalizeAnonHandle,
 } from "@/lib/api";
 
-import { getGalleryDisplayName } from "@/lib/constants";
 
 interface PostCardProps {
   post: Post;
@@ -45,10 +44,10 @@ export const PostCard: React.FC<PostCardProps> = ({ post }) => {
   const imageFiles = post.files?.filter((f) => isImageFile(f)) || [];
   const otherFiles = post.files?.filter((f) => !isImageFile(f)) || [];
 
-  // Extract tag from title if present like "[Crypto] ZK Proofs"
+  // Use gallery field directly (new structure); fallback to title tag extraction for any legacy posts
   const tagMatch = post.title.match(/^\[(.*?)\]/);
-  const categoryTag = tagMatch ? tagMatch[1] : null;
-  const cleanTitle = tagMatch ? post.title.replace(/^\[.*?\]\s*/, "") : post.title;
+  const categoryTag = post.gallery || (tagMatch ? tagMatch[1] : null);
+  const cleanTitle = categoryTag && post.title.startsWith("[") ? post.title.replace(/^\[.*?\]\s*/, "") : post.title;
 
   const handleUpvote = async (e: React.MouseEvent) => {
     e.preventDefault();
@@ -114,7 +113,7 @@ export const PostCard: React.FC<PostCardProps> = ({ post }) => {
                   </span>
                   {categoryTag && (
                     <span className="px-2 py-0.5 text-xs font-sans font-medium rounded-sm bg-cyan-500/10 text-cyan-400 border border-cyan-500/30">
-                      {getGalleryDisplayName(categoryTag)}
+                      {categoryTag}
                     </span>
                   )}
                 </div>
