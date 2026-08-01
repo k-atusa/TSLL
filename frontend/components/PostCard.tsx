@@ -44,10 +44,8 @@ export const PostCard: React.FC<PostCardProps> = ({ post }) => {
   const imageFiles = post.files?.filter((f) => isImageFile(f)) || [];
   const otherFiles = post.files?.filter((f) => !isImageFile(f)) || [];
 
-  // Use gallery field directly (new structure); fallback to title tag extraction for any legacy posts
-  const tagMatch = (post.title || "").match(/^\[([^\]]+)\]/);
-  const categoryTag = post.gallery || (tagMatch ? tagMatch[1] : null);
-  const cleanTitle = categoryTag && post.title?.startsWith("[") ? post.title.replace(/^\[[^\]]+\]\s*/, "") : (post.title || "(제목 없음)");
+  const categoryTag = post.gallery || null;
+  const displayTitle = post.title?.trim() || "(제목 없음)";
 
   const handleUpvote = async (e: React.MouseEvent) => {
     e.preventDefault();
@@ -124,7 +122,7 @@ export const PostCard: React.FC<PostCardProps> = ({ post }) => {
 
           {/* Title */}
           <h3 className="text-lg md:text-xl font-bold text-slate-100 group-hover:text-white mb-2 leading-snug tracking-tight">
-            {cleanTitle}
+            {displayTitle}
           </h3>
 
           {/* Body preview */}

@@ -16,10 +16,7 @@ const API_BASE = "";
 // ============================================================
 
 export function sanitizeText(str?: string | null): string {
-  if (!str) return "";
-  let cleaned = str.replace(/[\u0000-\u0008\u000B\u000C\u000E-\u001F\u007F]/g, "");
-  cleaned = cleaned.replace(/\r\n/g, "\n").replace(/\r/g, "\n");
-  return cleaned;
+  return str || "";
 }
 
 export function generateAnonId(id: string): { handle: string; color: string } {
@@ -130,12 +127,7 @@ export function buildAttachmentToken(id: string): string {
 
 export function stripAttachmentTokens(text: string): string {
   if (!text) return "";
-  return text.replace(/\\?\[\[attach:[a-zA-Z0-9_-]+\]\]/g, (match) => {
-    if (match.startsWith("\\")) {
-      return match.slice(1);
-    }
-    return "";
-  });
+  return text.replace(/\[\[attach:[a-zA-Z0-9_-]+\]\]/g, "");
 }
 
 // ============================================================

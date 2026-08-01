@@ -232,22 +232,7 @@ func registerFCom(enableCORS func(http.ResponseWriter, *http.Request) bool) {
 // ============================================================
 
 func sanitizeString(s string) string {
-	if s == "" {
-		return ""
-	}
-	s = strings.ToValidUTF8(s, "")
-	s = strings.ReplaceAll(s, "\r\n", "\n")
-	s = strings.ReplaceAll(s, "\r", "\n")
-
-	var b strings.Builder
-	b.Grow(len(s))
-	for _, r := range s {
-		if (r >= 0x00 && r <= 0x08) || r == 0x0B || r == 0x0C || (r >= 0x0E && r <= 0x1F) || r == 0x7F {
-			continue
-		}
-		b.WriteRune(r)
-	}
-	return b.String()
+	return strings.ToValidUTF8(s, "")
 }
 
 func sanitizeAttachmentID(id string) string {
