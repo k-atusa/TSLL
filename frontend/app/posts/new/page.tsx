@@ -23,7 +23,7 @@ import {
 } from "lucide-react";
 import { Header } from "@/components/Header";
 import { PostBodyContent } from "@/components/PostBodyContent";
-import { buildAttachmentToken, createPost, fetchGalleries, generateRandomAnonId, isImageFile } from "@/lib/api";
+import { buildAttachmentToken, createPost, fetchGalleries, generateAttachmentId, generateRandomAnonId, isImageFile } from "@/lib/api";
 import { BoardCategory, GalleryInfo } from "@/lib/types";
 
 export default function CreatePostPage() {
@@ -95,7 +95,7 @@ export default function CreatePostPage() {
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files) {
       const selected = Array.from(e.target.files).map((file) => ({
-        id: globalThis.crypto?.randomUUID?.() ?? `${Date.now()}-${Math.random()}`,
+        id: generateAttachmentId(),
         file,
       }));
       setAttachments((prev) => [...prev, ...selected]);
@@ -129,7 +129,7 @@ export default function CreatePostPage() {
     setDragActive(false);
     if (e.dataTransfer.files) {
       const selected = Array.from(e.dataTransfer.files).map((file) => ({
-        id: globalThis.crypto?.randomUUID?.() ?? `${Date.now()}-${Math.random()}`,
+        id: generateAttachmentId(),
         file,
       }));
       setAttachments((prev) => [...prev, ...selected]);
@@ -241,11 +241,10 @@ export default function CreatePostPage() {
                     key={cat.id}
                     type="button"
                     onClick={() => setSelectedCategory(cat.id)}
-                    className={`px-3.5 py-2 rounded-md text-xs font-medium transition-all cursor-pointer ${
-                      selectedCategory === cat.id
+                    className={`px-3.5 py-2 rounded-md text-xs font-medium transition-all cursor-pointer ${selectedCategory === cat.id
                         ? "bg-cyan-500/20 text-cyan-300 border border-cyan-500/50 shadow-sm font-bold"
                         : "bg-slate-950 text-slate-400 border border-slate-800 hover:text-white"
-                    }`}
+                      }`}
                   >
                     {cat.icon} {cat.name}
                   </button>
@@ -410,8 +409,8 @@ export default function CreatePostPage() {
               onDragLeave={() => setDragActive(false)}
               onDrop={handleDrop}
               className={`border-2 border-dashed rounded-md p-6 text-center transition-colors cursor-pointer ${dragActive
-                  ? "border-cyan-400 bg-cyan-950/20"
-                  : "border-slate-800 bg-slate-950 hover:border-slate-700"
+                ? "border-cyan-400 bg-cyan-950/20"
+                : "border-slate-800 bg-slate-950 hover:border-slate-700"
                 }`}
             >
               <input

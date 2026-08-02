@@ -120,8 +120,22 @@ export function getCleanFileName(filename: string): string {
   return filename;
 }
 
+export function generateAttachmentId(): string {
+  if (typeof globalThis.crypto?.randomUUID === "function") {
+    return globalThis.crypto.randomUUID();
+  }
+  // Fallback: generate a UUID-v4-shaped string using Math.random
+  return "xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx".replace(/[xy]/g, (c) => {
+    const r = (Math.random() * 16) | 0;
+    const v = c === "x" ? r : (r & 0x3) | 0x8;
+    return v.toString(16);
+  });
+}
+
 export function buildAttachmentToken(id: string): string {
-  const cleanId = (id || "").replace(/[^a-zA-Z0-9_-]/g, "");
+  const cleanId = (id || "")
+    .replace(/[^a-zA-Z0-9_-]/g, "-")
+    .replace(/^-+|-+$/g, "");
   return `[[attach:${cleanId || "file-0"}]]`;
 }
 

@@ -11,7 +11,7 @@ import {
   CheckCircle2,
   AlertCircle,
 } from "lucide-react";
-import { createPost, fetchGalleries, generateRandomAnonId, isImageFile, sanitizeText } from "@/lib/api";
+import { createPost, fetchGalleries, generateAttachmentId, generateRandomAnonId, isImageFile, sanitizeText } from "@/lib/api";
 import { BoardCategory, GalleryInfo, Post } from "@/lib/types";
 import { buildAttachmentToken } from "@/lib/api";
 
@@ -67,7 +67,7 @@ export const CreatePostModal: React.FC<CreatePostModalProps> = ({
   const handleFileSelect = (selectedFiles: FileList | null) => {
     if (!selectedFiles) return;
     const newAttachments = Array.from(selectedFiles).map((file) => ({
-      id: globalThis.crypto?.randomUUID?.() ?? `${Date.now()}-${Math.random()}`,
+      id: generateAttachmentId(),
       file,
     }));
     setAttachments((prev) => [...prev, ...newAttachments]);
@@ -169,7 +169,7 @@ export const CreatePostModal: React.FC<CreatePostModalProps> = ({
             <div>
               <h3 className="text-sm font-bold text-white font-mono">NEW ANONYMOUS POST</h3>
               <p className="text-[11px] text-slate-400">
-                  Posting as <span className="font-mono text-cyan-400 font-semibold">{previewAnon.handle}</span> (No Trace)
+                Posting as <span className="font-mono text-cyan-400 font-semibold">{previewAnon.handle}</span> (No Trace)
               </p>
             </div>
           </div>
@@ -224,11 +224,10 @@ export const CreatePostModal: React.FC<CreatePostModalProps> = ({
                       key={g.id}
                       type="button"
                       onClick={() => setSelectedCategory(g.id)}
-                      className={`px-3 py-1.5 rounded-md text-xs font-mono transition-all flex items-center gap-1.5 ${
-                        active
+                      className={`px-3 py-1.5 rounded-md text-xs font-mono transition-all flex items-center gap-1.5 ${active
                           ? "bg-cyan-500 text-slate-950 font-bold shadow-[0_0_12px_rgba(6,182,212,0.3)]"
                           : "bg-slate-950 text-slate-400 border border-slate-800 hover:text-slate-200"
-                      }`}
+                        }`}
                     >
                       <span>{g.icon}</span>
                       <span>{g.name}</span>
@@ -286,11 +285,10 @@ export const CreatePostModal: React.FC<CreatePostModalProps> = ({
                 handleFileSelect(e.dataTransfer.files);
               }}
               onClick={() => fileInputRef.current?.click()}
-              className={`border-2 border-dashed rounded-md p-5 text-center cursor-pointer transition-all ${
-                isDragOver
+              className={`border-2 border-dashed rounded-md p-5 text-center cursor-pointer transition-all ${isDragOver
                   ? "border-cyan-400 bg-cyan-500/10"
                   : "border-slate-800 bg-slate-950/60 hover:border-slate-700"
-              }`}
+                }`}
             >
               <input
                 ref={fileInputRef}
