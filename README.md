@@ -2,7 +2,7 @@
 
 ## 📋 Overview
 
-> project USAG: FalseCrypt server v2.2.0
+> project USAG: FalseCrypt server v2.2.1
 
 **FalseCrypt-server** is an all-in-one backend and frontend solution providing a **Community Posting Blog**, a **Chunk-based Datastore Backend for the FalseCrypt**, and an intuitive **Next.js Web Interface** with support for **Standalone Single-Binary Deployment**.
 

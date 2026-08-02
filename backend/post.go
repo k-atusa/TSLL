@@ -89,11 +89,6 @@ var uploadSem = make(chan struct{}, 8)
 
 const pageSize = 100
 
-var imageExtensions = map[string]bool{
-	".png": true, ".webp": true, ".jpg": true, ".jpeg": true,
-	".gif": true, ".avif": true, ".bmp": true,
-}
-
 // ============================================================
 // Initialization & Route Registration
 // ============================================================
@@ -287,26 +282,19 @@ func generateAnonHandle(seed int64) string {
 	return fmt.Sprintf("익명#%s", h)
 }
 
-func isImageExt(filename string) bool {
-	return imageExtensions[strings.ToLower(filepath.Ext(filename))]
-}
-
-// ============================================================
-// Storage & Disk Helpers
-// ============================================================
-
 // galleryPostDir returns the posts directory for the given gallery ID.
 func galleryPostDir(galleryID string) string {
 	return filepath.Join(fciMeta.PostDir, galleryID)
 }
 
-// galleryIDSet returns a set of valid gallery IDs for fast lookup.
-func galleryIDSet() map[string]struct{} {
-	m := make(map[string]struct{}, len(fciMeta.Galleries))
+// isValidGallery checks whether galleryID matches a configured gallery.
+func isValidGallery(id string) bool {
 	for _, g := range fciMeta.Galleries {
-		m[g.ID] = struct{}{}
+		if g.ID == id {
+			return true
+		}
 	}
-	return m
+	return false
 }
 
 // findPostPath scans all gallery directories for a post with the given ID.
@@ -483,7 +471,7 @@ func handleGetPosts(w http.ResponseWriter, r *http.Request) {
 			dirs = append(dirs, g.ID)
 		}
 	default:
-		if _, ok := galleryIDSet()[galleryParam]; !ok {
+		if !isValidGallery(galleryParam) {
 			http.Error(w, "Unknown gallery", http.StatusBadRequest)
 			return
 		}
@@ -585,7 +573,7 @@ func handleCreatePost(w http.ResponseWriter, r *http.Request) {
 	handle := normalizeHandle(r.FormValue("handle"))
 	galleryID := strings.TrimSpace(sanitizeString(r.FormValue("gallery")))
 
-	if _, ok := galleryIDSet()[galleryID]; !ok {
+	if !isValidGallery(galleryID) {
 		if len(fciMeta.Galleries) > 0 {
 			galleryID = fciMeta.Galleries[0].ID
 		} else {
@@ -637,16 +625,6 @@ func handleCreatePost(w http.ResponseWriter, r *http.Request) {
 
 		post.Files = append(post.Files, filename)
 		post.Attachments = append(post.Attachments, Attachment{ID: attachmentID, Filename: filename})
-
-		// Auto-inject image attachment token into post body
-		if isImageExt(cleanFilename) {
-			token := fmt.Sprintf("[[attach:%s]]", attachmentID)
-			if post.Body == "" {
-				post.Body = token
-			} else {
-				post.Body = post.Body + "\n" + token
-			}
-		}
 	}
 
 	// Persist and enforce capacity under write lock
@@ -664,67 +642,8 @@ func handleCreatePost(w http.ResponseWriter, r *http.Request) {
 	json.NewEncoder(w).Encode(post)
 }
 
-// POST /api/com/posts/<id>/comments
-func handleCreateComment(w http.ResponseWriter, r *http.Request) {
-	mu.Lock()
-	defer mu.Unlock()
-
-	id := strings.TrimSuffix(strings.TrimPrefix(r.URL.Path, "/api/com/posts/"), "/comments")
-	if id == "" || filepath.Base(id) != id {
-		http.Error(w, "Invalid post ID", http.StatusBadRequest)
-		return
-	}
-
-	postPath, _ := findPostPath(id)
-	if postPath == "" {
-		http.Error(w, "Post not found", http.StatusNotFound)
-		return
-	}
-
-	p, err := loadPost(postPath)
-	if err != nil {
-		http.Error(w, "Corrupt post data", http.StatusInternalServerError)
-		return
-	}
-
-	var req struct {
-		Body   string `json:"body"`
-		Handle string `json:"handle"`
-	}
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		http.Error(w, "Invalid request payload", http.StatusBadRequest)
-		return
-	}
-
-	sanitizedBody := strings.TrimSpace(sanitizeString(req.Body))
-	if sanitizedBody == "" {
-		http.Error(w, "Comment body is required", http.StatusBadRequest)
-		return
-	}
-
-	handle := normalizeHandle(req.Handle)
-	if handle == "" {
-		handle = generateAnonHandle(time.Now().UnixNano())
-	}
-
-	now := time.Now().UnixNano()
-	p.Comments = append(p.Comments, Comment{
-		ID:        fmt.Sprintf("%d", now),
-		Handle:    handle,
-		Body:      sanitizedBody,
-		CreatedAt: now,
-	})
-
-	if err := savePost(postPath, p); err != nil {
-		http.Error(w, "Failed to save comment", http.StatusInternalServerError)
-		return
-	}
-	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(p)
-}
-
-// modifyPostVote is a shared helper for like/dislike handlers.
-func modifyPostVote(w http.ResponseWriter, r *http.Request, suffix string, apply func(*Post)) {
+// updatePost is a generic helper to locate, load, mutate, and save a post under mu.Lock().
+func updatePost(w http.ResponseWriter, r *http.Request, suffix string, mutate func(p *Post) error) {
 	mu.Lock()
 	defer mu.Unlock()
 
@@ -746,7 +665,10 @@ func modifyPostVote(w http.ResponseWriter, r *http.Request, suffix string, apply
 		return
 	}
 
-	apply(&p)
+	if err := mutate(&p); err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
 
 	if err := savePost(postPath, p); err != nil {
 		http.Error(w, "Failed to save post", http.StatusInternalServerError)
@@ -756,12 +678,52 @@ func modifyPostVote(w http.ResponseWriter, r *http.Request, suffix string, apply
 	json.NewEncoder(w).Encode(p)
 }
 
+// POST /api/com/posts/<id>/comments
+func handleCreateComment(w http.ResponseWriter, r *http.Request) {
+	var req struct {
+		Body   string `json:"body"`
+		Handle string `json:"handle"`
+	}
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		http.Error(w, "Invalid request payload", http.StatusBadRequest)
+		return
+	}
+
+	sanitizedBody := strings.TrimSpace(sanitizeString(req.Body))
+	if sanitizedBody == "" {
+		http.Error(w, "Comment body is required", http.StatusBadRequest)
+		return
+	}
+
+	handle := normalizeHandle(req.Handle)
+	if handle == "" {
+		handle = generateAnonHandle(time.Now().UnixNano())
+	}
+
+	updatePost(w, r, "/comments", func(p *Post) error {
+		now := time.Now().UnixNano()
+		p.Comments = append(p.Comments, Comment{
+			ID:        fmt.Sprintf("%d", now),
+			Handle:    handle,
+			Body:      sanitizedBody,
+			CreatedAt: now,
+		})
+		return nil
+	})
+}
+
 // POST /api/com/posts/<id>/like
 func handleLikePost(w http.ResponseWriter, r *http.Request) {
-	modifyPostVote(w, r, "/like", func(p *Post) { p.Likes++ })
+	updatePost(w, r, "/like", func(p *Post) error {
+		p.Likes++
+		return nil
+	})
 }
 
 // POST /api/com/posts/<id>/dislike
 func handleDislikePost(w http.ResponseWriter, r *http.Request) {
-	modifyPostVote(w, r, "/dislike", func(p *Post) { p.Dislikes++ })
+	updatePost(w, r, "/dislike", func(p *Post) error {
+		p.Dislikes++
+		return nil
+	})
 }

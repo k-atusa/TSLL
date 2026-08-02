@@ -23,7 +23,7 @@ import {
 } from "lucide-react";
 import { Header } from "@/components/Header";
 import { PostBodyContent } from "@/components/PostBodyContent";
-import { buildAttachmentToken, createPost, fetchGalleries, generateRandomAnonId } from "@/lib/api";
+import { buildAttachmentToken, createPost, fetchGalleries, generateRandomAnonId, isImageFile } from "@/lib/api";
 import { BoardCategory, GalleryInfo } from "@/lib/types";
 
 export default function CreatePostPage() {
@@ -99,6 +99,28 @@ export default function CreatePostPage() {
         file,
       }));
       setAttachments((prev) => [...prev, ...selected]);
+
+      // Auto-insert [[attach:uuid]] tags into body editor for image files
+      const imageTokens = selected
+        .filter((att) => isImageFile(att.file.name))
+        .map((att) => `${buildAttachmentToken(att.id)}\n`)
+        .join("");
+
+      if (imageTokens) {
+        if (textareaRef.current) {
+          const el = textareaRef.current;
+          const start = el.selectionStart ?? body.length;
+          const end = el.selectionEnd ?? body.length;
+          setBody((prev) => `${prev.slice(0, start)}${imageTokens}${prev.slice(end)}`);
+          requestAnimationFrame(() => {
+            el.focus();
+            const nextCursor = start + imageTokens.length;
+            el.setSelectionRange(nextCursor, nextCursor);
+          });
+        } else {
+          setBody((prev) => (prev ? `${prev}\n${imageTokens}` : imageTokens));
+        }
+      }
     }
   };
 
@@ -111,10 +133,37 @@ export default function CreatePostPage() {
         file,
       }));
       setAttachments((prev) => [...prev, ...selected]);
+
+      // Auto-insert [[attach:uuid]] tags into body editor for image files
+      const imageTokens = selected
+        .filter((att) => isImageFile(att.file.name))
+        .map((att) => `${buildAttachmentToken(att.id)}\n`)
+        .join("");
+
+      if (imageTokens) {
+        if (textareaRef.current) {
+          const el = textareaRef.current;
+          const start = el.selectionStart ?? body.length;
+          const end = el.selectionEnd ?? body.length;
+          setBody((prev) => `${prev.slice(0, start)}${imageTokens}${prev.slice(end)}`);
+          requestAnimationFrame(() => {
+            el.focus();
+            const nextCursor = start + imageTokens.length;
+            el.setSelectionRange(nextCursor, nextCursor);
+          });
+        } else {
+          setBody((prev) => (prev ? `${prev}\n${imageTokens}` : imageTokens));
+        }
+      }
     }
   };
 
   const removeFile = (index: number) => {
+    const target = attachments[index];
+    if (target) {
+      const token = buildAttachmentToken(target.id);
+      setBody((prev) => prev.replace(`${token}\n`, "").replace(token, ""));
+    }
     setAttachments((prev) => prev.filter((_, i) => i !== index));
   };
 

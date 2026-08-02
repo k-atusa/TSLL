@@ -11,7 +11,7 @@ import {
   CheckCircle2,
   AlertCircle,
 } from "lucide-react";
-import { createPost, fetchGalleries, generateRandomAnonId, sanitizeText } from "@/lib/api";
+import { createPost, fetchGalleries, generateRandomAnonId, isImageFile, sanitizeText } from "@/lib/api";
 import { BoardCategory, GalleryInfo, Post } from "@/lib/types";
 import { buildAttachmentToken } from "@/lib/api";
 
@@ -71,9 +71,36 @@ export const CreatePostModal: React.FC<CreatePostModalProps> = ({
       file,
     }));
     setAttachments((prev) => [...prev, ...newAttachments]);
+
+    // Auto-insert [[attach:uuid]] tags into body editor for image files
+    const imageTokens = newAttachments
+      .filter((att) => isImageFile(att.file.name))
+      .map((att) => `${buildAttachmentToken(att.id)}\n`)
+      .join("");
+
+    if (imageTokens) {
+      if (textareaRef.current) {
+        const el = textareaRef.current;
+        const start = el.selectionStart ?? body.length;
+        const end = el.selectionEnd ?? body.length;
+        setBody((prev) => `${prev.slice(0, start)}${imageTokens}${prev.slice(end)}`);
+        requestAnimationFrame(() => {
+          el.focus();
+          const nextCursor = start + imageTokens.length;
+          el.setSelectionRange(nextCursor, nextCursor);
+        });
+      } else {
+        setBody((prev) => (prev ? `${prev}\n${imageTokens}` : imageTokens));
+      }
+    }
   };
 
   const handleRemoveFile = (index: number) => {
+    const target = attachments[index];
+    if (target) {
+      const token = buildAttachmentToken(target.id);
+      setBody((prev) => prev.replace(`${token}\n`, "").replace(token, ""));
+    }
     setAttachments((prev) => prev.filter((_, i) => i !== index));
   };
 
